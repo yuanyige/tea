@@ -1,10 +1,13 @@
 MODEL:
-  ADAPTATION: norm
+  ADAPTATION: tent
   ARCH: Standard
 TEST:
   BATCH_SIZE: 200
 CORRUPTION:
   DATASET: cifar10
+  NUM_CLASSES: 10
+  IMG_SIZE: 32
+  NUM_CHANNEL: 3
   SEVERITY:
     - 5
     - 4
@@ -27,3 +30,9 @@ CORRUPTION:
     - elastic_transform
     - pixelate
     - jpeg_compression
+OPTIM:
+  METHOD: Adam
+  STEPS: 1
+  BETA: 0.9
+  LR: 1e-3
+  WD: 0.

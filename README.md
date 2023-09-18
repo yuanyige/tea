@@ -64,7 +64,7 @@ python cifar10c.py --cfg cfgs/source.yaml
 python cifar10c.py --cfg cfgs/norm.yaml
 python cifar10c.py --cfg cfgs/tent.yaml
 ```
-
+python mnist.py --cfg cfgs/m
 **Result**: tent reduces the error (%) across corruption types at the most severe level of corruption (level 5).
 
 |                                                            | mean | gauss_noise | shot_noise | impulse_noise | defocus_blur | glass_blur | motion_blur | zoom_blur | snow | frost |  fog | brightness | contrast | elastic_trans | pixelate | jpeg |

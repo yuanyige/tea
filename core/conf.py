@@ -8,10 +8,6 @@
 import argparse
 import os
 import sys
-import logging
-import random
-import torch
-import numpy as np
 from datetime import datetime
 from iopath.common.file_io import g_pathmgr
 from yacs.config import CfgNode as CfgNode
@@ -34,15 +30,24 @@ _C.MODEL.ARCH = 'Standard'
 # - tent: test-time entropy minimization (ours)
 _C.MODEL.ADAPTATION = 'source'
 
+_C.MODEL.ADA_PARAM= ['bn']
+
 # By default tent is online, with updates persisting across batches.
 # To make adaptation episodic, and reset the model for each batch, choose True.
 _C.MODEL.EPISODIC = False
+
 
 # ----------------------------- Corruption options -------------------------- #
 _C.CORRUPTION = CfgNode()
 
 # Dataset for evaluation
 _C.CORRUPTION.DATASET = 'cifar10'
+
+_C.CORRUPTION.NUM_CLASSES = 10
+
+_C.CORRUPTION.IMG_SIZE= 32
+
+_C.CORRUPTION.NUM_CHANNEL= 3
 
 # Check https://github.com/hendrycks/robustness for corruption details
 _C.CORRUPTION.TYPE = ['gaussian_noise', 'shot_noise', 'impulse_noise',
@@ -72,6 +77,9 @@ _C.OPTIM.STEPS = 1
 # Learning rate
 _C.OPTIM.LR = 1e-3
 
+# Batch size for evaluation (and updates for norm + tent)
+_C.OPTIM.BATCH_SIZE = 128
+
 # Choices: Adam, SGD
 _C.OPTIM.METHOD = 'Adam'
 
@@ -93,9 +101,6 @@ _C.OPTIM.WD = 0.0
 # ------------------------------- Testing options --------------------------- #
 _C.TEST = CfgNode()
 
-# Batch size for evaluation (and updates for norm + tent)
-_C.TEST.BATCH_SIZE = 128
-
 # --------------------------------- CUDNN options --------------------------- #
 _C.CUDNN = CfgNode()
 
@@ -114,7 +119,7 @@ _C.RNG_SEED = 1
 _C.SAVE_DIR = "./output"
 
 # Data directory
-_C.DATA_DIR = "./data"
+_C.DATA_DIR = "/home/yuanyige/datasets"
 
 # Weight directory
 _C.CKPT_DIR = "./ckpt"
@@ -128,6 +133,22 @@ _C.LOG_TIME = ''
 # # Config destination (in SAVE_DIR)
 # _C.CFG_DEST = "cfg.yaml"
 
+# ------------------------------- EBM options --------------------------- #
+
+_C.EBM = CfgNode()
+
+_C.EBM.BUFFER_SIZE = 10000
+
+_C.EBM.REINIT_FREQ = 0.05
+
+_C.EBM.SGLD_LR = 1.0
+
+_C.EBM.SGLD_STD = 0.01
+
+_C.EBM.STEPS = 20
+
+_C.EBM.UNCOND = "uncond"
+
 # --------------------------------- Default config -------------------------- #
 _CFG_DEFAULT = _C.clone()
 _CFG_DEFAULT.freeze()
@@ -136,7 +157,7 @@ _CFG_DEFAULT.freeze()
 def assert_and_infer_cfg():
     """Checks config values invariants."""
     err_str = "Unknown adaptation method."
-    assert _C.MODEL.ADAPTATION in ["source", "norm", "tent"]
+    assert _C.MODEL.ADAPTATION in ["source", "norm", "tent", "energy"]
     err_str = "Log destination '{}' not supported"
     assert _C.LOG_DEST in ["stdout", "file"], err_str.format(_C.LOG_DEST)
 
@@ -167,7 +188,7 @@ def reset_cfg():
 
 def load_cfg_fom_args(description="Config options."):
     """Load config from command line args and set any specified options."""
-    current_time = datetime.now().strftime("%y%m%d_%H%M%S")
+    current_time = datetime.now().strftime("%y%m%d-%H%M%S")
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--cfg", dest="cfg_file", type=str, required=True,
                         help="Config file location")
@@ -181,30 +202,18 @@ def load_cfg_fom_args(description="Config options."):
     merge_from_file(args.cfg_file)
     cfg.merge_from_list(args.opts)
 
-    log_dest = os.path.basename(args.cfg_file)
-    log_dest = log_dest.replace('.yaml', '_{}.txt'.format(current_time))
-
-    g_pathmgr.mkdirs(cfg.SAVE_DIR)
+    opt_list=[str(cfg.OPTIM.METHOD).lower(), str(cfg.OPTIM.STEPS), str(cfg.OPTIM.LR), str(cfg.OPTIM.BATCH_SIZE)]
+    if cfg.MODEL.ADAPTATION == "energy":
+        ebm_list=[str(cfg.EBM.UNCOND), str(cfg.EBM.STEPS), str(cfg.EBM.SGLD_LR), str(cfg.EBM.SGLD_STD), str(cfg.EBM.BUFFER_SIZE), str(cfg.EBM.REINIT_FREQ)]
+        log_dest = os.path.basename(args.cfg_file)
+        log_dest = log_dest.replace('.yaml', '_{}_{}_{}_{}.txt'.format("-".join(cfg.MODEL.ADA_PARAM), "-".join(opt_list), "-".join(ebm_list), current_time))
+    else:
+        log_dest = os.path.basename(args.cfg_file)
+        log_dest = log_dest.replace('.yaml', '_{}_{}_{}.txt'.format("-".join(cfg.MODEL.ADA_PARAM), "-".join(opt_list), current_time))
     cfg.LOG_TIME, cfg.LOG_DEST = current_time, log_dest
+    
+    folder_name = "_".join(cfg.LOG_DEST.split("_")[:-1])
+    cfg.SAVE_DIR = os.path.join(cfg.SAVE_DIR, folder_name)
+    g_pathmgr.mkdirs(cfg.SAVE_DIR)
     cfg.freeze()
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format="[%(asctime)s] [%(filename)s: %(lineno)4d]: %(message)s",
-        datefmt="%y/%m/%d %H:%M:%S",
-        handlers=[
-            logging.FileHandler(os.path.join(cfg.SAVE_DIR, cfg.LOG_DEST)),
-            logging.StreamHandler()
-        ])
-
-    np.random.seed(cfg.RNG_SEED)
-    torch.manual_seed(cfg.RNG_SEED)
-    random.seed(cfg.RNG_SEED)
-    torch.backends.cudnn.benchmark = cfg.CUDNN.BENCHMARK
-
-    logger = logging.getLogger(__name__)
-    version = [torch.__version__, torch.version.cuda,
-               torch.backends.cudnn.version()]
-    logger.info(
-        "PyTorch Version: torch={}, cuda={}, cudnn={}".format(*version))
-    logger.info(cfg)
