@@ -1,6 +1,8 @@
 
 import torch
 import torch.nn as nn
+
+from core.setup.data import load_data
 from core.setup.optim import setup_optimizer
 from core.setup.param import configure_model, collect_params
 
@@ -57,13 +59,10 @@ def setup_eata(model, cfg, logger):
     # optimizer = torch.optim.SGD(params, 0.00025, momentum=0.9)
     if cfg.EATA.USE_FISHER:
         # compute fisher informatrix
-        corruption = 'original'
-        fisher_dataset, fisher_loader = eata.prepare_test_data(corruption=corruption, use_transforms=True, batch_size=cfg.OPTIM.BATCH_SIZE, im_sz=cfg.CORRUPTION.IMG_SIZE)
-        fisher_dataset.set_dataset_size(cfg.EATA.FISHER_SIZE)
-        fisher_dataset.switch_mode(True, False)
-
-        model = eata.configure_model(model)
-        params, param_names = eata.collect_params(model)
+        _, fisher_dataset, _, fisher_loader = load_data(root=cfg.DATA_DIR, dataset=cfg.CORRUPTION.DATASET, batch_size=cfg.OPTIM.BATCH_SIZE, if_shuffle=False, logger=logger)
+        #fisher_dataset.set_dataset_size(cfg.EATA.FISHER_SIZE)
+        model = configure_model(model)
+        params, param_names = collect_params(model, logger=logger)
         ewc_optimizer = torch.optim.SGD(params, 0.001)
         fishers = {}
         train_loss_fn = nn.CrossEntropyLoss().cuda()
@@ -89,6 +88,9 @@ def setup_eata(model, cfg, logger):
         eta_model = eata.EATA(model, optimizer, fishers, cfg.EATA.FISHER_ALPHA, e_margin=cfg.EATA.E_MARGIN, d_margin=cfg.EATA.D_MARGIN)
     else:
         eta_model = eata.EATA(model, optimizer, e_margin=cfg.EATA.E_MARGIN, d_margin=cfg.EATA.D_MARGIN)
+    logger.info(f"model for adaptation: %s", model)
+    logger.info(f"params for adaptation: %s", param_names)
+    logger.info(f"optimizer for adaptation: %s", optimizer)
     return eta_model
 
 def setup_energy(model, cfg, logger):

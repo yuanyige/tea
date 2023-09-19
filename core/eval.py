@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 import robustbench
 from robustbench.data import load_cifar10c, load_cifar10
-from core.setup.data import load_dataset
+from core.setup.data import load_data
 
 
 def evaluate(model, cfg, logger):
@@ -37,7 +37,7 @@ def evaluate(model, cfg, logger):
         logger.info("\n"+str(frame))
     
     elif cfg.CORRUPTION.DATASET == 'mnist':
-        _, test_loader = load_dataset(dataset=cfg.CORRUPTION.DATASET, data_path=cfg.DATA_DIR, batch_size=cfg.OPTIM.BATCH_SIZE, num_workers=4)
+        _, _, _, test_loader = load_data(root=cfg.DATA_DIR, dataset=cfg.CORRUPTION.DATASET, batch_size=cfg.OPTIM.BATCH_SIZE, if_shuffle=False, logger=None)
         acc = clean_accuracy(model, test_loader, logger=logger)
         logger.info("Test set Accuracy: {}".format(acc))
     

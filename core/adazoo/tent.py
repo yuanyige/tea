@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.jit
-from core.setup.optim import load_model_and_optimizer, copy_model_and_optimizer
+from core.utils import load_model_and_optimizer, copy_model_and_optimizer
 
 class Tent(nn.Module):
     """Tent adapts a model by entropy minimization during testing.

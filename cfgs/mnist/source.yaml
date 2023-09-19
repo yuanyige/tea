@@ -1,0 +1,12 @@
+SAVE_DIR: ./save
+MODEL:
+  ADAPTATION: source
+  ARCH: Standard
+  ALL_PARAM: False
+TEST:
+  BATCH_SIZE: 200
+CORRUPTION:
+  DATASET: mnist
+  NUM_CLASSES: 10
+  IMG_SIZE: 28
+  NUM_CHANNEL: 1

@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.jit
 from pytorch_fid import fid_score
 from torchvision.utils import save_image
-from core.setup.optim import load_model_and_optimizer, copy_model_and_optimizer
+from core.utils import load_model_and_optimizer, copy_model_and_optimizer
 
 # inception_model = torchvision.models.inception_v3(pretrained=True)
 

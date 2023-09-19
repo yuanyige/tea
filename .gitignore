@@ -12,14 +12,10 @@ __pycache__/
 .envrc
 
 ## Project
-
 *.pth
 *.pt
 ckpt/
-/notebooks/*wild.ipynb
-/experiments
-mnist*/
-data*/
+experiments/
 output*/
 save*/
 .others/

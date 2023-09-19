@@ -8,6 +8,7 @@
 import argparse
 import os
 import sys
+import math
 from datetime import datetime
 from iopath.common.file_io import g_pathmgr
 from yacs.config import CfgNode as CfgNode
@@ -149,6 +150,25 @@ _C.EBM.STEPS = 20
 
 _C.EBM.UNCOND = "uncond"
 
+# ------------------------------- EATA options --------------------------- #
+
+_C.EATA = CfgNode()
+
+# choose ETA or EATA
+_C.EATA.USE_FISHER = False
+
+# number of samples to compute fisher information matrix
+_C.EATA.FISHER_SIZE = 2000
+
+# the trade-off between entropy and regularization loss, in Eqn. (8)
+_C.EATA.FISHER_ALPHA = 2000.0
+
+# entropy margin E_0 in Eqn. (3) for filtering reliable samples
+_C.EATA.E_MARGIN = math.log(1000)*0.40
+
+# epsilon in Eqn. (5) for filtering redundant samples
+_C.EATA.D_MARGIN = 0.05
+
 # --------------------------------- Default config -------------------------- #
 _CFG_DEFAULT = _C.clone()
 _CFG_DEFAULT.freeze()
@@ -207,13 +227,12 @@ def load_cfg_fom_args(description="Config options."):
         ebm_list=[str(cfg.EBM.UNCOND), str(cfg.EBM.STEPS), str(cfg.EBM.SGLD_LR), str(cfg.EBM.SGLD_STD), str(cfg.EBM.BUFFER_SIZE), str(cfg.EBM.REINIT_FREQ)]
         log_dest = os.path.basename(args.cfg_file)
         log_dest = log_dest.replace('.yaml', '_{}_{}_{}_{}.txt'.format("-".join(cfg.MODEL.ADA_PARAM), "-".join(opt_list), "-".join(ebm_list), current_time))
+        folder_name = "_".join(cfg.LOG_DEST.split("_")[:-1])
+        cfg.SAVE_DIR = os.path.join(cfg.SAVE_DIR, folder_name)
+        g_pathmgr.mkdirs(cfg.SAVE_DIR)
     else:
         log_dest = os.path.basename(args.cfg_file)
         log_dest = log_dest.replace('.yaml', '_{}_{}_{}.txt'.format("-".join(cfg.MODEL.ADA_PARAM), "-".join(opt_list), current_time))
     cfg.LOG_TIME, cfg.LOG_DEST = current_time, log_dest
-    
-    folder_name = "_".join(cfg.LOG_DEST.split("_")[:-1])
-    cfg.SAVE_DIR = os.path.join(cfg.SAVE_DIR, folder_name)
-    g_pathmgr.mkdirs(cfg.SAVE_DIR)
     cfg.freeze()
 

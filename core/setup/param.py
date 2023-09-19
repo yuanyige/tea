@@ -2,10 +2,8 @@ import torch.nn as nn
 
 def collect_params(model, ada_param=['bn'], logger=None):
     """Collect the affine scale + shift parameters from batch norms.
-
     Walk the model's modules and collect all batch normalization parameters.
     Return the parameters and their names.
-
     Note: other choices of parameterization are possible!
     """
     params = []
