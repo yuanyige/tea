@@ -1,8 +1,9 @@
-SAVE_DIR: ./save
+SAVE_DIR: ./save/mnist
 MODEL:
   ADAPTATION: tent
   ARCH: Standard
-  ALL_PARAM: False
+  ADA_PARAM:
+    - bn
 TEST:
   BATCH_SIZE: 200
 CORRUPTION:

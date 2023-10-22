@@ -1,6 +1,7 @@
+SAVE_DIR: ./save/cifar10/augmix
 MODEL:
   ADAPTATION: eata
-  ARCH: Standard
+  ARCH: Hendrycks2020AugMix_WRN
   ADA_PARAM:
     - bn
 EATA:

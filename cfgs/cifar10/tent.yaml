@@ -1,8 +1,11 @@
+SAVE_DIR: ./save/cifar10/group50
 MODEL:
   ADAPTATION: tent
-  ARCH: Standard
-TEST:
-  BATCH_SIZE: 200
+  ARCH: GN50 #Standard
+  ADA_PARAM:
+    - gn
+    - conv 
+    - fc
 CORRUPTION:
   DATASET: cifar10
   NUM_CLASSES: 10
@@ -31,6 +34,7 @@ CORRUPTION:
     - pixelate
     - jpeg_compression
 OPTIM:
+  BATCH_SIZE: 200
   METHOD: Adam
   STEPS: 1
   BETA: 0.9

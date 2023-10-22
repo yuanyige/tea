@@ -1,12 +1,13 @@
-SAVE_DIR: ./save
+SAVE_DIR: ./save/mnist
 MODEL:
   ADAPTATION: norm
   ARCH: Standard
-  ALL_PARAM: False
-TEST:
-  BATCH_SIZE: 200
+  ADA_PARAM:
+    - bn
 CORRUPTION:
   DATASET: mnist
   NUM_CLASSES: 10
   IMG_SIZE: 28
   NUM_CHANNEL: 1
+OPTIM:
+  BATCH_SIZE: 200

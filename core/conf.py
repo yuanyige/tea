@@ -227,8 +227,10 @@ def load_cfg_fom_args(description="Config options."):
         ebm_list=[str(cfg.EBM.UNCOND), str(cfg.EBM.STEPS), str(cfg.EBM.SGLD_LR), str(cfg.EBM.SGLD_STD), str(cfg.EBM.BUFFER_SIZE), str(cfg.EBM.REINIT_FREQ)]
         log_dest = os.path.basename(args.cfg_file)
         log_dest = log_dest.replace('.yaml', '_{}_{}_{}_{}.txt'.format("-".join(cfg.MODEL.ADA_PARAM), "-".join(opt_list), "-".join(ebm_list), current_time))
-        folder_name = "_".join(cfg.LOG_DEST.split("_")[:-1])
+        folder_name = "_".join(log_dest.split("_")[:-1])
         cfg.SAVE_DIR = os.path.join(cfg.SAVE_DIR, folder_name)
+        #print('cfg.SAVE_DIR',cfg.SAVE_DIR,log_dest)
+        #exit(0)
         g_pathmgr.mkdirs(cfg.SAVE_DIR)
     else:
         log_dest = os.path.basename(args.cfg_file)

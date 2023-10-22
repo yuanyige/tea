@@ -11,7 +11,25 @@ def collect_params(model, ada_param=['bn'], logger=None):
     if 'bn' in ada_param:
         logger.info('adapting weights of batch-normalization layer')
         for nm, m in model.named_modules():
-            if isinstance(m, nn.BatchNorm2d):
+            if isinstance(m, nn.BatchNorm2d): #nn.GroupNorm nn.
+                for np, p in m.named_parameters():
+                    if np in ['weight', 'bias']:  # weight is scale, bias is shift
+                        params.append(p)
+                        names.append(f"{nm}.{np}")
+
+    if 'gn' in ada_param:
+        logger.info('adapting weights of batch-normalization layer')
+        for nm, m in model.named_modules():
+            if isinstance(m, nn.GroupNorm): #nn.GroupNorm nn.BatchNorm2d
+                for np, p in m.named_parameters():
+                    if np in ['weight', 'bias']:  # weight is scale, bias is shift
+                        params.append(p)
+                        names.append(f"{nm}.{np}")
+    
+    if 'conv' in ada_param:
+        logger.info('adapting weights of conv layer')
+        for nm, m in model.named_modules():
+            if isinstance(m, nn.Conv2d):
                 for np, p in m.named_parameters():
                     if np in ['weight', 'bias']:  # weight is scale, bias is shift
                         params.append(p)
@@ -26,21 +44,39 @@ def collect_params(model, ada_param=['bn'], logger=None):
                         names.append(f"{nm}.{np}")
     return params, names
 
+
 def configure_model(model, ada_param=['bn']):
     """Configure model for use with tent."""
     # train mode, because tent optimizes the model to minimize entropy
     model.train()
     # disable grad, to (re-)enable only what tent updates
     model.requires_grad_(False)
+
     if 'bn' in ada_param:
         # configure norm for model updates: enable grad + force batch statisics
         for m in model.modules():
-            if isinstance(m, nn.BatchNorm2d):
+            if isinstance(m, nn.BatchNorm2d): #nn.BatchNorm2d
                 m.requires_grad_(True)
                 # force use of batch stats in train and eval modes
                 m.track_running_stats = False
                 m.running_mean = None
                 m.running_var = None
+
+    if 'gn' in ada_param:
+        # configure norm for model updates: enable grad + force batch statisics
+        for m in model.modules():
+            if isinstance(m, nn.GroupNorm): #nn.BatchNorm2d
+                m.requires_grad_(True)
+                # force use of batch stats in train and eval modes
+                m.track_running_stats = False
+                m.running_mean = None
+                m.running_var = None
+    
+    if 'conv' in ada_param:
+        for m in model.modules():
+            if isinstance(m, nn.Conv2d):
+                m.requires_grad_(True)
+
     if 'fc' in ada_param:
         for m in model.modules():
             if isinstance(m, nn.Linear):

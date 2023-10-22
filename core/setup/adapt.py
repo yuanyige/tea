@@ -10,6 +10,7 @@ import core.adazoo.energy as energy
 import core.adazoo.tent as tent
 import core.adazoo.norm as norm
 import core.adazoo.eata as eata
+#import core.adazoo.memo as memo
 
 def setup_source(model, cfg, logger):
     """Set up the baseline source model without adaptation."""
@@ -19,7 +20,6 @@ def setup_source(model, cfg, logger):
 
 def setup_norm(model, cfg, logger):
     """Set up test-time normalization adaptation.
-
     Adapt by normalizing features with test batch statistics.
     The statistics are measured independently for each batch;
     no running average or other cross-batch estimation is used.
@@ -32,12 +32,11 @@ def setup_norm(model, cfg, logger):
 
 def setup_tent(model, cfg, logger):
     """Set up tent adaptation.
-
     Configure the model for training + feature modulation by batch statistics,
     collect the parameters for feature modulation by gradient optimization,
     set up the optimizer, and then tent the model.
     """
-    model = configure_model(model)
+    model = configure_model(model, ada_param=cfg.MODEL.ADA_PARAM)
     params, param_names = collect_params(model,
                                          ada_param=cfg.MODEL.ADA_PARAM,
                                          logger=logger)
@@ -85,8 +84,11 @@ def setup_eata(model, cfg, logger):
             ewc_optimizer.zero_grad()
         logger.info("compute fisher matrices finished")
         del ewc_optimizer
+        print('fishers',fishers)
         eta_model = eata.EATA(model, optimizer, fishers, cfg.EATA.FISHER_ALPHA, e_margin=cfg.EATA.E_MARGIN, d_margin=cfg.EATA.D_MARGIN)
+        
     else:
+        print('fishers',None)
         eta_model = eata.EATA(model, optimizer, e_margin=cfg.EATA.E_MARGIN, d_margin=cfg.EATA.D_MARGIN)
     logger.info(f"model for adaptation: %s", model)
     logger.info(f"params for adaptation: %s", param_names)
@@ -94,10 +96,7 @@ def setup_eata(model, cfg, logger):
     return eta_model
 
 def setup_energy(model, cfg, logger):
-    """Set up tent adaptation.
-    Configure the model for training + feature modulation by batch statistics,
-    collect the parameters for feature modulation by gradient optimization,
-    set up the optimizer, and then tent the model.
+    """Set up energy adaptation.
     """
     model = configure_model(model, ada_param=cfg.MODEL.ADA_PARAM)
     params, param_names = collect_params(model, 
@@ -117,9 +116,23 @@ def setup_energy(model, cfg, logger):
                            im_sz=cfg.CORRUPTION.IMG_SIZE, 
                            n_ch = cfg.CORRUPTION.NUM_CHANNEL,
                            path = cfg.SAVE_DIR,
-                           logger = logger
-                           )
+                           logger = logger)
     logger.info(f"model for adaptation: %s", model)
     logger.info(f"params for adaptation: %s", param_names)
     logger.info(f"optimizer for adaptation: %s", optimizer)
     return energy_model
+
+# def setup_memo(model, cfg, logger):
+#     """Set up energy adaptation.
+#     """
+#     model = configure_model(model, ada_param=cfg.MODEL.ADA_PARAM)
+#     params, param_names = collect_params(model, 
+#                                          ada_param=cfg.MODEL.ADA_PARAM,
+#                                          logger=logger)
+#     optimizer = setup_optimizer(params, cfg, logger)
+#     energy_model = memo.MEMO(model, optimizer,
+#                            steps=cfg.OPTIM.STEPS)
+#     logger.info(f"model for adaptation: %s", model)
+#     logger.info(f"params for adaptation: %s", param_names)
+#     logger.info(f"optimizer for adaptation: %s", optimizer)
+#     return energy_model

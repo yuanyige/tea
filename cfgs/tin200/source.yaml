@@ -1,12 +1,12 @@
-SAVE_DIR: ./save/cifar10/augmix
+SAVE_DIR: ./save/tin200/augmix
 MODEL:
-  ADAPTATION: norm
-  ARCH: Hendrycks2020AugMix_WRN
+  ADAPTATION: source
+  ARCH: AugMix #Standard #
   ADA_PARAM:
     - bn
 CORRUPTION:
-  DATASET: cifar10
-  NUM_CLASSES: 10
+  DATASET: tin200
+  NUM_CLASSES: 200
   IMG_SIZE: 32
   NUM_CHANNEL: 3
   SEVERITY:

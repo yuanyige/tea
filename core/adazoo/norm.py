@@ -19,7 +19,7 @@ class Norm(nn.Module):
                                      no_stats)
         self.model_state = deepcopy(self.model.state_dict())
 
-    def forward(self, x):
+    def forward(self, x, if_adapt=None, counter=None, if_vis=False):
         return self.model(x)
 
     def reset(self):

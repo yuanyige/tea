@@ -1,12 +1,14 @@
-SAVE_DIR: ./save/cifar10/augmix
+SAVE_DIR: ./save/cifar100/standard
 MODEL:
-  ADAPTATION: norm
-  ARCH: Hendrycks2020AugMix_WRN
+  ADAPTATION: eata
+  ARCH: Standard #Hendrycks2020AugMix_WRN 
   ADA_PARAM:
     - bn
+EATA:
+  USE_FISHER: False
 CORRUPTION:
-  DATASET: cifar10
-  NUM_CLASSES: 10
+  DATASET: cifar100
+  NUM_CLASSES: 100
   IMG_SIZE: 32
   NUM_CHANNEL: 3
   SEVERITY:
@@ -33,3 +35,8 @@ CORRUPTION:
     - jpeg_compression
 OPTIM:
   BATCH_SIZE: 200
+  METHOD: Adam
+  STEPS: 1
+  BETA: 0.9
+  LR: 0.001
+  WD: 0.

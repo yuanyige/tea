@@ -103,21 +103,27 @@ class Energy(nn.Module):
         self.model_state, self.optimizer_state = \
             copy_model_and_optimizer(self.energy_model, self.optimizer)
 
-    def forward(self, x):
+    def forward(self, x, if_adapt=True, counter=None, if_vis=False):
         if self.episodic:
             self.reset()
 
-        for i in range(self.steps):
-            outputs, energy_loss = forward_and_adapt(x, self.energy_model, self.optimizer, 
-                                        self.replay_buffer, self.sgld_steps, self.sgld_lr, self.sgld_std, self.reinit_freq,
-                                        if_cond=self.if_cond, n_classes=self.n_classes)
-        
-            if i % 1 ==0:
-                visualize_images(path=self.path, replay_buffer_old=self.replay_buffer_old, replay_buffer=self.replay_buffer, energy_model=self.energy_model, 
-                                sgld_steps=self.sgld_steps, sgld_lr=self.sgld_lr, sgld_std=self.sgld_std, reinit_freq=self.reinit_freq,
-                                batch_size=100, n_classes=self.n_classes, im_sz=self.im_sz, n_ch=self.n_ch, device=x.device, step=i)
+        if if_adapt:
+            for i in range(self.steps):
+                outputs, energy_loss = forward_and_adapt(x, self.energy_model, self.optimizer, 
+                                            self.replay_buffer, self.sgld_steps, self.sgld_lr, self.sgld_std, self.reinit_freq,
+                                            if_cond=self.if_cond, n_classes=self.n_classes)
+            
+                if i % 1 ==0 and if_vis:
+                    visualize_images(path=self.path, replay_buffer_old=self.replay_buffer_old, replay_buffer=self.replay_buffer, energy_model=self.energy_model, 
+                                    sgld_steps=self.sgld_steps, sgld_lr=self.sgld_lr, sgld_std=self.sgld_std, reinit_freq=self.reinit_freq,
+                                    batch_size=100, n_classes=self.n_classes, im_sz=self.im_sz, n_ch=self.n_ch, device=x.device, counter=counter, step=i)
                 self.logger.info("Step {}, Energy Loss: {}".format(i, energy_loss))
-        
+        else:
+            #print("no adaptation")
+            self.energy_model.eval()
+            with torch.no_grad():
+                outputs = self.energy_model.classify(x)
+
         return outputs
 
     def reset(self):
@@ -129,7 +135,7 @@ class Energy(nn.Module):
 @torch.enable_grad()
 def visualize_images(path, replay_buffer_old, replay_buffer, energy_model, 
                      sgld_steps, sgld_lr, sgld_std, reinit_freq,
-                     batch_size, n_classes, im_sz, n_ch, device=None, step=None):
+                     batch_size, n_classes, im_sz, n_ch, device=None, counter=None, step=None):
     num_cols=10
     #y = torch.randint(0, n_classes, (batch_size,)).to(device)
     repeat_times = batch_size // n_classes
@@ -145,7 +151,7 @@ def visualize_images(path, replay_buffer_old, replay_buffer, energy_model,
     images_diff = replay_buffer.cpu() - replay_buffer_old.cpu()
     if step == 0:
         save_image(images_init , os.path.join(path, 'buffer_init.png'), padding=2, nrow=num_cols)
-    save_image(images , os.path.join(path, 'buffer.png'), padding=2, nrow=num_cols)
+    save_image(images , os.path.join(path, 'buffer.png'), padding=2, nrow=num_cols) # 'buffer-'+str(counter)+"-"+str(step)+'.png'
     save_image(images_diff , os.path.join(path, 'buffer_diff.png'), padding=2, nrow=num_cols)
 
 

@@ -21,12 +21,19 @@ class Tent(nn.Module):
         self.model_state, self.optimizer_state = \
             copy_model_and_optimizer(self.model, self.optimizer)
 
-    def forward(self, x):
+    def forward(self, x, if_adapt=True, counter=None, if_vis=False):
         if self.episodic:
             self.reset()
 
-        for _ in range(self.steps):
-            outputs = forward_and_adapt(x, self.model, self.optimizer)
+        if if_adapt:
+            #print("adaptating..")
+            for _ in range(self.steps):
+                outputs = forward_and_adapt(x, self.model, self.optimizer)
+        else:
+            #print("no adaptation")
+            self.model.eval()
+            with torch.no_grad():
+                outputs = self.model(x)
 
         return outputs
 

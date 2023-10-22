@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from copy import deepcopy
+from .resnet import ResNetCifar as ResNet
 
 def set_seed(cfg):
     os.environ['PYTHONHASHSEED'] =str(cfg.RNG_SEED)
@@ -19,6 +20,7 @@ def set_seed(cfg):
     torch.backends.cudnn.benchmark = cfg.CUDNN.BENCHMARK
 
 def set_logger(cfg):
+    os.makedirs(cfg.SAVE_DIR,exist_ok=True)
     logging.basicConfig(
         level=logging.INFO,
         format="[%(asctime)s] [%(filename)s: %(lineno)4d]: %(message)s",
@@ -74,28 +76,36 @@ def train_base(epoch, model, train_loader, optimizer):
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                        100. * batch_idx / len(train_loader), loss.item()))
 
-def run():
-    train_loader, test_loader = load_dataset('mnist')
-    # 加载模型并修改第一层以适应MNIST输入尺寸
-    model = resnet18(pretrained=False, num_classes=10)
-    model.conv1 = torch.nn.Conv2d(1, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
-    model.maxpool = torch.nn.Identity()  # 移除maxpool层，因为MNIST图像尺寸较小
-    model.cuda()
+def build_model(group_norm, depth, num_classes):
+    print('Building model...')
+    def gn_helper(planes):
+        return nn.GroupNorm(group_norm, planes)
+    net = ResNet(depth, 1, channels=3, classes=num_classes, norm_layer=gn_helper).cuda()
+    # if hasattr(args, 'parallel') and args.parallel:
+    #     net = torch.nn.DataParallel(net)
+    return net
+# def run():
+#     train_loader, test_loader = load_dataset('mnist')
+#     # 加载模型并修改第一层以适应MNIST输入尺寸
+#     model = resnet18(pretrained=False, num_classes=10)
+#     model.conv1 = torch.nn.Conv2d(1, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+#     model.maxpool = torch.nn.Identity()  # 移除maxpool层，因为MNIST图像尺寸较小
+#     model.cuda()
 
-    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
+#     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
     
-    # 实际进行训练和测试
-    for epoch in range(1, 20 + 1):  # 总共进行20轮训练
-        train(epoch, model, train_loader, optimizer, criterion)
-        test(model, test_loader, criterion)
+#     # 实际进行训练和测试
+#     for epoch in range(1, 20 + 1):  # 总共进行20轮训练
+#         train(epoch, model, train_loader, optimizer, criterion)
+#         test(model, test_loader, criterion)
     
-    # 保存整个模型
-    torch.save(model, "mnist_resnet18.pth")
+#     # 保存整个模型
+#     torch.save(model, "mnist_resnet18.pt")
 
 
 
-    # def calculate_fid():
-#     fid_value = fid_score.calculate_fid_given_paths([real_images_folder, generated_images_folder],
-#                                                     inception_model,
-#                                                     transform=transform)
-    # return fid_value
+#     # def calculate_fid():
+# #     fid_value = fid_score.calculate_fid_given_paths([real_images_folder, generated_images_folder],
+# #                                                     inception_model,
+# #                                                     transform=transform)
+#     # return fid_value

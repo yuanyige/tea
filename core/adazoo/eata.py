@@ -45,10 +45,12 @@ class EATA(nn.Module):
         self.model_state, self.optimizer_state = \
             copy_model_and_optimizer(self.model, self.optimizer)
 
-    def forward(self, x):
+    def forward(self, x, if_adapt=True, counter=None, if_vis=False):
         if self.episodic:
             self.reset()
-        if self.steps > 0:
+
+        #if self.steps > 0:
+        if if_adapt:
             for _ in range(self.steps):
                 outputs, num_counts_2, num_counts_1, updated_probs = forward_and_adapt_eata(x, self.model, self.optimizer, self.fishers, self.e_margin, self.current_model_probs, fisher_alpha=self.fisher_alpha, num_samples_update=self.num_samples_update_2, d_margin=self.d_margin)
                 self.num_samples_update_2 += num_counts_2
@@ -58,6 +60,7 @@ class EATA(nn.Module):
             self.model.eval()
             with torch.no_grad():
                 outputs = self.model(x)
+        
         return outputs
 
     def reset(self):
