@@ -169,6 +169,13 @@ _C.EATA.E_MARGIN = math.log(1000)*0.40
 # epsilon in Eqn. (5) for filtering redundant samples
 _C.EATA.D_MARGIN = 0.05
 
+# ------------------------------- ESARATA options --------------------------- #
+
+_C.SAR = CfgNode()
+
+# the threshold for reliable minimization in SAR, Eqn. (2)
+_C.SAR.MARGIN_E0 = math.log(1000)*0.40
+
 # --------------------------------- Default config -------------------------- #
 _CFG_DEFAULT = _C.clone()
 _CFG_DEFAULT.freeze()

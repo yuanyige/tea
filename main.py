@@ -18,17 +18,19 @@ def main(description):
     set_seed(cfg)
     set_logger(cfg)
 
+    device = torch.device('cuda:0')
+
     # configure base model
     if 'GN' in cfg.MODEL.ARCH:
         depth = int(cfg.MODEL.ARCH[2:])
-        base_model = build_model(8, depth, cfg.CORRUPTION.NUM_CLASSES)
+        base_model = build_model(8, cfg.CORRUPTION.NUM_CLASSES).to(device)
         ckpt = torch.load('./ckpt/{}/ResNet50G.pth'.format(cfg.CORRUPTION.DATASET))
         base_model.load_state_dict(ckpt['state_dict'])
     else:
         if (cfg.CORRUPTION.DATASET == 'cifar10') or (cfg.CORRUPTION.DATASET == 'cifar100' and cfg.MODEL.ARCH != 'Standard'):
-            base_model = load_model(cfg.MODEL.ARCH, cfg.CKPT_DIR, cfg.CORRUPTION.DATASET, ThreatModel.corruptions).cuda()
+            base_model = load_model(cfg.MODEL.ARCH, cfg.CKPT_DIR, cfg.CORRUPTION.DATASET, ThreatModel.corruptions).to(device)
         elif (cfg.CORRUPTION.DATASET == 'mnist')or (cfg.CORRUPTION.DATASET == 'tin200') or (cfg.CORRUPTION.DATASET == 'cifar100' and cfg.MODEL.ARCH == 'Standard'):
-            base_model = torch.load(os.path.join(cfg.CKPT_DIR, cfg.CORRUPTION.DATASET, str(cfg.MODEL.ARCH)+'.pt')).cuda()
+            base_model = torch.load(os.path.join(cfg.CKPT_DIR, cfg.CORRUPTION.DATASET, str(cfg.MODEL.ARCH)+'.pt')).to(device)
         else:
             raise NotImplementedError
 
@@ -42,25 +44,25 @@ def main(description):
     elif cfg.MODEL.ADAPTATION == "tent":
         logger.info("test-time adaptation: TENT")
         model = setup_tent(base_model, cfg, logger)
-    # elif cfg.MODEL.ADAPTATION == "eta":
-    #     logger.info("test-time adaptation: ETA")
-    #     model = setup_eta(base_model, cfg, logger)
+    elif cfg.MODEL.ADAPTATION == "eta":
+        logger.info("test-time adaptation: ETA")
+        model = setup_eata(base_model, cfg, logger)
     elif cfg.MODEL.ADAPTATION == "eata":
         logger.info("test-time adaptation: EATA")
         model = setup_eata(base_model, cfg, logger)
     elif cfg.MODEL.ADAPTATION == "energy":
         logger.info("test-time adaptation: ENERGY")
         model = setup_energy(base_model, cfg, logger)
-    # elif cfg.MODEL.ADAPTATION == "memo":
-    #     logger.info("test-time adaptation: MEMO")
-    #     model = setup_memo(base_model, cfg, logger)
+    elif cfg.MODEL.ADAPTATION == "sar":
+        logger.info("test-time adaptation: SAR")
+        model = setup_sar(base_model, cfg, logger)
     else:
         raise NotImplementedError
     
     # evaluate on each severity and type of corruption in turn
-    # evaluate_adv(base_model, model, cfg, logger)
-    evaluate_ood(model, cfg, logger)
-    evaluate_ori(model, cfg, logger)
+    # evaluate_adv(base_model, model, cfg, logger, device)
+    evaluate_ood(model, cfg, logger, device)
+    evaluate_ori(model, cfg, logger, device)
     
     
 

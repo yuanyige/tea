@@ -9,6 +9,7 @@ import robustbench
 from core.setup.data import load_data, load_dataloader
 from autoattack import AutoAttack
 
+from torchvision.utils import save_image
 
 def clean_accuracy(model, x, y, batch_size = 100, device = None, ada=None, if_adapt=True, if_vis=False):
     if device is None:
@@ -21,28 +22,32 @@ def clean_accuracy(model, x, y, batch_size = 100, device = None, ada=None, if_ad
                        batch_size].to(device)
             y_curr = y[counter * batch_size:(counter + 1) *
                        batch_size].to(device)
-            
+
             if ada == 'source':
                 output = model(x_curr)
             else:
-                output = model(x_curr, if_adapt=if_adapt, counter=counter, if_vis=if_vis)
+                if ada == 'energy':
+                    output, energes = model(x_curr, if_adapt=if_adapt, counter=counter, if_vis=if_vis)
+                else:
+                    output = model(x_curr, if_adapt=if_adapt, counter=counter, if_vis=if_vis)
 
             acc += (output.max(1)[1] == y_curr).float().sum()
 
     return acc.item() / x.shape[0]
 
 
-def clean_accuracy_loader(model, test_loader, logger=None):
+def clean_accuracy_loader(model, test_loader, logger=None, device=None, ada=None, if_adapt=True, if_vis=False):
     test_loss = 0
     correct = 0
     index = 1
     total_step = math.ceil(len(test_loader.dataset) / test_loader.batch_size)
     with torch.no_grad():
-        for data, target in test_loader:
+        for counter, (data, target) in enumerate(test_loader):
             logger.info("Test Batch Process: {}/{}".format(index, total_step))
-            data, target = data.cuda(), target.cuda()
+            data, target = data.to(device), target.to(device)
+            save_image(data[:16].detach().cpu() , '1111.png', padding=2, nrow=8)
             with torch.no_grad():
-                output = model(data)
+                output = model(data, if_adapt=if_adapt, counter=counter, if_vis=if_vis)
             test_loss += F.cross_entropy(output, target).item() 
             pred = output.argmax(dim=1, keepdim=True)  
             correct += pred.eq(target.view_as(pred)).sum().item()
@@ -54,7 +59,7 @@ def clean_accuracy_loader(model, test_loader, logger=None):
 
 
 
-def evaluate_ood(model, cfg, logger):
+def evaluate_ood(model, cfg, logger, device):
     if (cfg.CORRUPTION.DATASET == 'cifar10') or (cfg.CORRUPTION.DATASET == 'cifar100') or (cfg.CORRUPTION.DATASET == 'tin200'):
         res = np.zeros((len(cfg.CORRUPTION.SEVERITY),len(cfg.CORRUPTION.TYPE)))
         res_ori = np.zeros((len(cfg.CORRUPTION.SEVERITY),len(cfg.CORRUPTION.TYPE)))
@@ -70,13 +75,13 @@ def evaluate_ood(model, cfg, logger):
                 x_test, y_test = load_data(cfg.CORRUPTION.DATASET+'c', cfg.CORRUPTION.NUM_EX,
                                             cfg.CORRUPTION.SEVERITY[s], cfg.DATA_DIR, False,
                                             [cfg.CORRUPTION.TYPE[c]])
-                x_test, y_test = x_test.cuda(), y_test.cuda()
+                x_test, y_test = x_test.to(device), y_test.to(device)
                 acc = clean_accuracy(model, x_test, y_test, cfg.OPTIM.BATCH_SIZE, ada=cfg.MODEL.ADAPTATION, if_adapt=True)
                 logger.info(f"acc % [{cfg.CORRUPTION.TYPE[c]}{cfg.CORRUPTION.SEVERITY[s]}]: {acc:.2%}")      
                 res[s, c] = acc
 
                 x_test_ori, y_test_ori = load_data(cfg.CORRUPTION.DATASET, n_examples=cfg.CORRUPTION.NUM_EX, data_dir=cfg.DATA_DIR)
-                x_test_ori, y_test_ori = x_test_ori.cuda(), y_test_ori.cuda()
+                x_test_ori, y_test_ori = x_test_ori.to(device), y_test_ori.to(device)
                 acc_ori = clean_accuracy(model, x_test_ori, y_test_ori, cfg.OPTIM.BATCH_SIZE, ada=cfg.MODEL.ADAPTATION, if_adapt=False)
                 logger.info(f"ori acc: {acc_ori:.2%}")      
                 res_ori[s, c] = acc_ori
@@ -93,15 +98,15 @@ def evaluate_ood(model, cfg, logger):
     
     elif cfg.CORRUPTION.DATASET == 'mnist':
         _, _, _, test_loader = load_dataloader(root=cfg.DATA_DIR, dataset=cfg.CORRUPTION.DATASET, batch_size=cfg.OPTIM.BATCH_SIZE, if_shuffle=False, logger=logger)
-        acc = clean_accuracy_loader(model, test_loader, logger=logger)
+        acc = clean_accuracy_loader(model, test_loader, logger=logger, device=device, if_adapt=True, if_vis=True)
         logger.info("Test set Accuracy: {}".format(acc))
     
     else:
         raise NotImplementedError
 
-def evaluate_adv(base_model, model, cfg, logger):
+def evaluate_adv(base_model, model, cfg, logger,device):
         x_test, y_test = load_data(cfg.CORRUPTION.DATASET, n_examples=cfg.CORRUPTION.NUM_EX, data_dir=cfg.DATA_DIR)
-        x_test, y_test = x_test.cuda(), y_test.cuda()
+        x_test, y_test = x_test.to(device), y_test.to(device)
         adversary = AutoAttack(base_model, norm='L2', eps=0.5, version='custom', attacks_to_run=['apgd-ce'])
         adversary.apgd.n_restarts = 1
         x_adv = adversary.run_standard_evaluation(x_test, y_test)
@@ -109,10 +114,16 @@ def evaluate_adv(base_model, model, cfg, logger):
         print("acc",acc)
 
 
-def evaluate_ori(model, cfg, logger):
-        x_test, y_test = load_data(cfg.CORRUPTION.DATASET, n_examples=cfg.CORRUPTION.NUM_EX, data_dir=cfg.DATA_DIR)
-        x_test, y_test = x_test.cuda(), y_test.cuda()
-        acc = clean_accuracy(model, x_test, y_test, cfg.OPTIM.BATCH_SIZE, ada=cfg.MODEL.ADAPTATION, if_adapt=True)
-        logger.info("Test set Accuracy: {}".format(acc))
+def evaluate_ori(model, cfg, logger,device):
+        if 'cifar' in cfg.CORRUPTION.DATASET:
+            x_test, y_test = load_data(cfg.CORRUPTION.DATASET, n_examples=cfg.CORRUPTION.NUM_EX, data_dir=cfg.DATA_DIR)
+            x_test, y_test = x_test.to(device), y_test.to(device)
+            acc = clean_accuracy(model, x_test, y_test, cfg.OPTIM.BATCH_SIZE, ada=cfg.MODEL.ADAPTATION, if_adapt=True, if_vis=True)
+            logger.info("Test set Accuracy: {}".format(acc))
+        else:
+            print("mnist")
+            _,_,_,test_loader = load_dataloader(root=cfg.DATA_DIR, dataset=cfg.CORRUPTION.DATASET, batch_size=cfg.OPTIM.BATCH_SIZE, if_shuffle=False, logger=logger)
+            acc = clean_accuracy_loader(model, test_loader, logger=logger, device=device, if_adapt=True, if_vis=True)
+            logger.info("Test set Accuracy: {}".format(acc))
 
 

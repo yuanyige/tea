@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from copy import deepcopy
-from .resnet import ResNetCifar as ResNet
+from .resnet import  ResNet, Bottleneck
 
 def set_seed(cfg):
     os.environ['PYTHONHASHSEED'] =str(cfg.RNG_SEED)
@@ -76,14 +76,22 @@ def train_base(epoch, model, train_loader, optimizer):
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                        100. * batch_idx / len(train_loader), loss.item()))
 
-def build_model(group_norm, depth, num_classes):
+def build_model(group_norm, num_classes):
     print('Building model...')
     def gn_helper(planes):
         return nn.GroupNorm(group_norm, planes)
-    net = ResNet(depth, 1, channels=3, classes=num_classes, norm_layer=gn_helper).cuda()
-    # if hasattr(args, 'parallel') and args.parallel:
-    #     net = torch.nn.DataParallel(net)
+    net = ResNet(block=Bottleneck, num_blocks=[3, 4, 6, 3], num_classes=num_classes, norm_layer=gn_helper)
     return net
+
+# def build_model(group_norm, depth, num_classes):
+#     print('Building model...')
+#     def gn_helper(planes):
+#         return nn.GroupNorm(group_norm, planes)
+#     net = ResNet(depth, 1, channels=3, classes=num_classes, norm_layer=gn_helper)
+#     # if hasattr(args, 'parallel') and args.parallel:
+#     #     net = torch.nn.DataParallel(net)
+#     return net
+
 # def run():
 #     train_loader, test_loader = load_dataset('mnist')
 #     # 加载模型并修改第一层以适应MNIST输入尺寸

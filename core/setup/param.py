@@ -20,6 +20,9 @@ def collect_params(model, ada_param=['bn'], logger=None):
     if 'gn' in ada_param:
         logger.info('adapting weights of batch-normalization layer')
         for nm, m in model.named_modules():
+            if 'layer4' in nm:
+                print("skiping")
+                continue
             if isinstance(m, nn.GroupNorm): #nn.GroupNorm nn.BatchNorm2d
                 for np, p in m.named_parameters():
                     if np in ['weight', 'bias']:  # weight is scale, bias is shift
@@ -42,6 +45,42 @@ def collect_params(model, ada_param=['bn'], logger=None):
                     if np in ['weight', 'bias']:  # weight is scale, bias is shift
                         params.append(p)
                         names.append(f"{nm}.{np}")
+    return params, names
+
+
+def collect_params_sar(model, logger=None):
+    """Collect the affine scale + shift parameters from norm layers.
+    Walk the model's modules and collect all normalization parameters.
+    Return the parameters and their names.
+    Note: other choices of parameterization are possible!
+    """
+    logger.info('adapting weights for SAR')
+    params = []
+    names = []
+    for nm, m in model.named_modules():
+        # skip top layers for adaptation: layer4 for ResNets and blocks9-11 for Vit-Base
+        if 'layer4' in nm:
+            continue
+        # if 'block3' in nm:
+        #     print("skiping")
+        #     continue
+        if 'blocks.9' in nm:
+            continue
+        if 'blocks.10' in nm:
+            continue
+        if 'blocks.11' in nm:
+            continue
+        if 'norm.' in nm:
+            continue
+        if nm in ['norm']:
+            continue
+
+        if isinstance(m, (nn.BatchNorm2d, nn.LayerNorm, nn.GroupNorm)):
+            for np, p in m.named_parameters():
+                if np in ['weight', 'bias']:  # weight is scale, bias is shift
+                    params.append(p)
+                    names.append(f"{nm}.{np}")
+
     return params, names
 
 
@@ -68,9 +107,9 @@ def configure_model(model, ada_param=['bn']):
             if isinstance(m, nn.GroupNorm): #nn.BatchNorm2d
                 m.requires_grad_(True)
                 # force use of batch stats in train and eval modes
-                m.track_running_stats = False
-                m.running_mean = None
-                m.running_var = None
+                # m.track_running_stats = False
+                # m.running_mean = None
+                # m.running_var = None
     
     if 'conv' in ada_param:
         for m in model.modules():

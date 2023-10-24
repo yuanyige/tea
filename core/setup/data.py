@@ -22,7 +22,7 @@ def set_transform(dataset):
             T.ToTensor(),
             #T.Normalize((0.1307,), (0.3081,)) 
         ])
-        transform_test = T.Compose([T.Resize(28), T.ToTensor()])
+        transform_test = T.Compose([T.Resize(28), T.RandomRotation(degrees=(90,91)), T.ToTensor()])
     elif  'tin200' in dataset.lower():
         transform_train = transforms.Compose([
             T.Resize(32), 
