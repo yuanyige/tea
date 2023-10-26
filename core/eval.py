@@ -11,27 +11,45 @@ from autoattack import AutoAttack
 
 from torchvision.utils import save_image
 
-def clean_accuracy(model, x, y, batch_size = 100, device = None, ada=None, if_adapt=True, if_vis=False):
+def clean_accuracy(model, x, y, batch_size = 100, logger=None, device = None, ada=None, if_adapt=True, if_vis=False):
     if device is None:
         device = x.device
     acc = 0.
+    loss = 0.
     n_batches = math.ceil(x.shape[0] / batch_size)
     with torch.no_grad():
+        energes_list=[]
         for counter in range(n_batches):
             x_curr = x[counter * batch_size:(counter + 1) *
                        batch_size].to(device)
             y_curr = y[counter * batch_size:(counter + 1) *
                        batch_size].to(device)
+            #save_image(x_curr[:16].detach().cpu() , 'real_samples.png', padding=2, nrow=8)
 
             if ada == 'source':
                 output = model(x_curr)
+                # closs = F.cross_entropy(output, y_curr)
+                # acc = ((output.max(1)[1] == y_curr).float().sum())/x_curr.shape[0]
+                # logger.info("Step -1, Classication Loss: {}".format(closs))
+                # logger.info("Step -1, Acc: {}".format(acc))
+                # logger.info("Step -1, Energy Score: {}".format(output.logsumexp(1).mean()))
             else:
                 if ada == 'energy':
                     output, energes = model(x_curr, if_adapt=if_adapt, counter=counter, if_vis=if_vis)
+                    energes_list.append(energes)
                 else:
                     output = model(x_curr, if_adapt=if_adapt, counter=counter, if_vis=if_vis)
 
+            #loss += F.cross_entropy(output, y_curr, reduction='sum')
             acc += (output.max(1)[1] == y_curr).float().sum()
+        
+        if len(energes_list) > 0:
+            energes = np.array(energes_list)
+            if energes.shape[1] > 1:
+                energes = energes.mean(axis=0)
+            else:
+                energes = energes.mean()
+            return acc.item() / x.shape[0], energes
 
     return acc.item() / x.shape[0]
 
@@ -45,9 +63,15 @@ def clean_accuracy_loader(model, test_loader, logger=None, device=None, ada=None
         for counter, (data, target) in enumerate(test_loader):
             logger.info("Test Batch Process: {}/{}".format(index, total_step))
             data, target = data.to(device), target.to(device)
-            save_image(data[:16].detach().cpu() , '1111.png', padding=2, nrow=8)
+            save_image(data[:16].detach().cpu() , 'real_samples.png', padding=2, nrow=8)
             with torch.no_grad():
-                output = model(data, if_adapt=if_adapt, counter=counter, if_vis=if_vis)
+                if ada == 'source':
+                    output = model(data)
+                else:
+                    if ada == 'energy':
+                        output, energes = model(data, if_adapt=if_adapt, counter=counter, if_vis=if_vis)
+                    else:
+                        output = model(data, if_adapt=if_adapt, counter=counter, if_vis=if_vis)
             test_loss += F.cross_entropy(output, target).item() 
             pred = output.argmax(dim=1, keepdim=True)  
             correct += pred.eq(target.view_as(pred)).sum().item()
@@ -63,6 +87,8 @@ def evaluate_ood(model, cfg, logger, device):
     if (cfg.CORRUPTION.DATASET == 'cifar10') or (cfg.CORRUPTION.DATASET == 'cifar100') or (cfg.CORRUPTION.DATASET == 'tin200'):
         res = np.zeros((len(cfg.CORRUPTION.SEVERITY),len(cfg.CORRUPTION.TYPE)))
         res_ori = np.zeros((len(cfg.CORRUPTION.SEVERITY),len(cfg.CORRUPTION.TYPE)))
+        res_en1 = np.zeros((len(cfg.CORRUPTION.SEVERITY),len(cfg.CORRUPTION.TYPE)))
+        res_en2 = np.zeros((len(cfg.CORRUPTION.SEVERITY),len(cfg.CORRUPTION.TYPE)))
         for c in range(len(cfg.CORRUPTION.TYPE)):
             for s in range(len(cfg.CORRUPTION.SEVERITY)):
                 # reset adaptation for each combination of corruption x severity
@@ -76,31 +102,59 @@ def evaluate_ood(model, cfg, logger, device):
                                             cfg.CORRUPTION.SEVERITY[s], cfg.DATA_DIR, False,
                                             [cfg.CORRUPTION.TYPE[c]])
                 x_test, y_test = x_test.to(device), y_test.to(device)
-                acc = clean_accuracy(model, x_test, y_test, cfg.OPTIM.BATCH_SIZE, ada=cfg.MODEL.ADAPTATION, if_adapt=True)
-                logger.info(f"acc % [{cfg.CORRUPTION.TYPE[c]}{cfg.CORRUPTION.SEVERITY[s]}]: {acc:.2%}")      
+                out = clean_accuracy(model, x_test, y_test, cfg.OPTIM.BATCH_SIZE, logger=logger, ada=cfg.MODEL.ADAPTATION, if_adapt=True)
+                
+                if cfg.MODEL.ADAPTATION == 'energy':
+                    acc, energes = out
+                    if len(energes.tolist()) > 1:
+                        res_en1[s, c] = energes[0]
+                        res_en2[s, c] = energes[1]
+                    else:
+                        res_en1[s, c] = energes[0]
+                    logger.info(f"mean energy % [{cfg.CORRUPTION.TYPE[c]}{cfg.CORRUPTION.SEVERITY[s]}]: {energes}")
+                else:
+                    acc = out
+                
+                logger.info(f"acc % [{cfg.CORRUPTION.TYPE[c]}{cfg.CORRUPTION.SEVERITY[s]}]: {acc:.2%}")
                 res[s, c] = acc
 
-                x_test_ori, y_test_ori = load_data(cfg.CORRUPTION.DATASET, n_examples=cfg.CORRUPTION.NUM_EX, data_dir=cfg.DATA_DIR)
-                x_test_ori, y_test_ori = x_test_ori.to(device), y_test_ori.to(device)
-                acc_ori = clean_accuracy(model, x_test_ori, y_test_ori, cfg.OPTIM.BATCH_SIZE, ada=cfg.MODEL.ADAPTATION, if_adapt=False)
-                logger.info(f"ori acc: {acc_ori:.2%}")      
-                res_ori[s, c] = acc_ori
+                # x_test_ori, y_test_ori = load_data(cfg.CORRUPTION.DATASET, n_examples=cfg.CORRUPTION.NUM_EX, data_dir=cfg.DATA_DIR)
+                # x_test_ori, y_test_ori = x_test_ori.to(device), y_test_ori.to(device)
+                # acc_ori = clean_accuracy(model, x_test_ori, y_test_ori, cfg.OPTIM.BATCH_SIZE, ada=cfg.MODEL.ADAPTATION, if_adapt=False)
+                # logger.info(f"ori acc: {acc_ori:.2%}")      
+                # res_ori[s, c] = acc_ori
 
         frame = pd.DataFrame({i+1: res[i, :] for i in range(0, len(cfg.CORRUPTION.SEVERITY))}, index=cfg.CORRUPTION.TYPE)
         frame.loc['average'] = {i+1: np.mean(res, axis=1)[i] for i in range(0, len(cfg.CORRUPTION.SEVERITY))}
         frame['avg'] = frame[list(range(1, len(cfg.CORRUPTION.SEVERITY)+1))].mean(axis=1)
         logger.info("\n"+str(frame))
 
-        frame = pd.DataFrame({i+1: res_ori[i, :] for i in range(0, len(cfg.CORRUPTION.SEVERITY))}, index=cfg.CORRUPTION.TYPE)
-        frame.loc['average'] = {i+1: np.mean(res_ori, axis=1)[i] for i in range(0, len(cfg.CORRUPTION.SEVERITY))}
-        frame['avg'] = frame[list(range(1, len(cfg.CORRUPTION.SEVERITY)+1))].mean(axis=1)
-        logger.info("\n"+str(frame))
+        if cfg.MODEL.ADAPTATION == 'energy':
+            frame_en1 = pd.DataFrame({i+1: res_en1[i, :] for i in range(0, len(cfg.CORRUPTION.SEVERITY))}, index=cfg.CORRUPTION.TYPE)
+            logger.info("\n"+str(frame_en1))
+            if len(energes.tolist()) > 1:
+                frame_en2 = pd.DataFrame({i+1: res_en2[i, :] for i in range(0, len(cfg.CORRUPTION.SEVERITY))}, index=cfg.CORRUPTION.TYPE)
+                logger.info("\n"+str(frame_en2))
     
     elif cfg.CORRUPTION.DATASET == 'mnist':
         _, _, _, test_loader = load_dataloader(root=cfg.DATA_DIR, dataset=cfg.CORRUPTION.DATASET, batch_size=cfg.OPTIM.BATCH_SIZE, if_shuffle=False, logger=logger)
         acc = clean_accuracy_loader(model, test_loader, logger=logger, device=device, if_adapt=True, if_vis=True)
         logger.info("Test set Accuracy: {}".format(acc))
     
+    elif cfg.CORRUPTION.DATASET == 'pacs':
+        accs=[]
+        for target_domain in cfg.CORRUPTION.TYPE:
+            x_test, y_test = load_data(data = cfg.CORRUPTION.DATASET, data_dir=cfg.DATA_DIR, shuffle = True, corruptions=target_domain)
+            x_test, y_test = x_test.to(device), y_test.to(device)
+            out = clean_accuracy(model, x_test, y_test, cfg.OPTIM.BATCH_SIZE, logger=logger, ada=cfg.MODEL.ADAPTATION, if_adapt=True)
+            if cfg.MODEL.ADAPTATION == 'energy':
+                acc = out[0]
+            else:
+                acc = out
+            logger.info(f"acc % [{target_domain}]: {acc:.2%}")
+            accs.append(acc)
+        acc_mean=np.array(accs).mean()
+        logger.info(f"mean acc:%: {acc_mean:.2%}")
     else:
         raise NotImplementedError
 
@@ -110,7 +164,7 @@ def evaluate_adv(base_model, model, cfg, logger,device):
         adversary = AutoAttack(base_model, norm='L2', eps=0.5, version='custom', attacks_to_run=['apgd-ce'])
         adversary.apgd.n_restarts = 1
         x_adv = adversary.run_standard_evaluation(x_test, y_test)
-        acc = clean_accuracy(model, x_adv, y_test, cfg.OPTIM.BATCH_SIZE, if_adapt=True)
+        acc = clean_accuracy(model, x_adv, y_test, cfg.OPTIM.BATCH_SIZE, logger=logger, if_adapt=True)
         print("acc",acc)
 
 
@@ -118,10 +172,15 @@ def evaluate_ori(model, cfg, logger,device):
         if 'cifar' in cfg.CORRUPTION.DATASET:
             x_test, y_test = load_data(cfg.CORRUPTION.DATASET, n_examples=cfg.CORRUPTION.NUM_EX, data_dir=cfg.DATA_DIR)
             x_test, y_test = x_test.to(device), y_test.to(device)
-            acc = clean_accuracy(model, x_test, y_test, cfg.OPTIM.BATCH_SIZE, ada=cfg.MODEL.ADAPTATION, if_adapt=True, if_vis=True)
+            out = clean_accuracy(model, x_test, y_test, cfg.OPTIM.BATCH_SIZE, logger=logger, ada=cfg.MODEL.ADAPTATION, if_adapt=True, if_vis=False)
+            if cfg.MODEL.ADAPTATION == 'energy':
+                acc, energes = out
+            else:
+                acc = out
             logger.info("Test set Accuracy: {}".format(acc))
+        elif 'pacs' in cfg.CORRUPTION.DATASET:
+            pass
         else:
-            print("mnist")
             _,_,_,test_loader = load_dataloader(root=cfg.DATA_DIR, dataset=cfg.CORRUPTION.DATASET, batch_size=cfg.OPTIM.BATCH_SIZE, if_shuffle=False, logger=logger)
             acc = clean_accuracy_loader(model, test_loader, logger=logger, device=device, if_adapt=True, if_vis=True)
             logger.info("Test set Accuracy: {}".format(acc))

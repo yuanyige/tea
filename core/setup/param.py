@@ -107,9 +107,9 @@ def configure_model(model, ada_param=['bn']):
             if isinstance(m, nn.GroupNorm): #nn.BatchNorm2d
                 m.requires_grad_(True)
                 # force use of batch stats in train and eval modes
-                # m.track_running_stats = False
-                # m.running_mean = None
-                # m.running_var = None
+                m.track_running_stats = False
+                m.running_mean = None
+                m.running_var = None
     
     if 'conv' in ada_param:
         for m in model.modules():

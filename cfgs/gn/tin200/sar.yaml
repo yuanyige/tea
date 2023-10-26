@@ -1,11 +1,9 @@
 SAVE_DIR: ./save/tin200/group50
 MODEL:
-  ADAPTATION: eata
-  ARCH: GN50 
+  ADAPTATION: sar
+  ARCH: GN50
   ADA_PARAM:
     - gn
-EATA:
-  USE_FISHER: False
 CORRUPTION:
   DATASET: tin200
   NUM_CLASSES: 200
@@ -35,8 +33,5 @@ CORRUPTION:
     - jpeg_compression
 OPTIM:
   BATCH_SIZE: 500
-  METHOD: Adam
   STEPS: 1
-  BETA: 0.9
-  LR: 0.0005
-  WD: 0.
+  LR: 0.0002

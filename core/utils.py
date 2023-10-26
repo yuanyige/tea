@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from copy import deepcopy
-from .resnet import  ResNet, Bottleneck
+from .resnet import  ResNet, Bottleneck, BasicBlock
 
 def set_seed(cfg):
     os.environ['PYTHONHASHSEED'] =str(cfg.RNG_SEED)
@@ -16,8 +16,8 @@ def set_seed(cfg):
     torch.manual_seed(cfg.RNG_SEED)
     torch.cuda.manual_seed(cfg.RNG_SEED)
     torch.cuda.manual_seed_all(cfg.RNG_SEED)
-    torch.backends.cudnn.deterministic =True
-    torch.backends.cudnn.benchmark = cfg.CUDNN.BENCHMARK
+    torch.backends.cudnn.deterministic = False #True
+    torch.backends.cudnn.benchmark = False #cfg.CUDNN.BENCHMARK
 
 def set_logger(cfg):
     os.makedirs(cfg.SAVE_DIR,exist_ok=True)
@@ -76,12 +76,17 @@ def train_base(epoch, model, train_loader, optimizer):
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                        100. * batch_idx / len(train_loader), loss.item()))
 
-def build_model(group_norm, num_classes):
+def build_model_res50gn(group_norm, num_classes):
     print('Building model...')
     def gn_helper(planes):
         return nn.GroupNorm(group_norm, planes)
     net = ResNet(block=Bottleneck, num_blocks=[3, 4, 6, 3], num_classes=num_classes, norm_layer=gn_helper)
     return net
+
+def build_model_res18bn(num_classes):
+    print('Building model...')
+    return ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes, norm_layer=nn.BatchNorm2d)
+
 
 # def build_model(group_norm, depth, num_classes):
 #     print('Building model...')

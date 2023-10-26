@@ -6,7 +6,7 @@ import torch.jit
 from pytorch_fid import fid_score
 from torchvision.utils import save_image
 from core.utils import load_model_and_optimizer, copy_model_and_optimizer
-
+import torch.nn.functional as F
 # inception_model = torchvision.models.inception_v3(pretrained=True)
 
 def init_random(bs, im_sz=32, n_ch=3):
@@ -107,10 +107,9 @@ class Energy(nn.Module):
         if self.episodic:
             self.reset()
         
-        energes=[]
         if if_adapt:
             for i in range(self.steps):
-                outputs, energy_loss, energy_real = forward_and_adapt(x, self.energy_model, self.optimizer, 
+                outputs, energy_loss, energes = forward_and_adapt(x, self.energy_model, self.optimizer, 
                                             self.replay_buffer, self.sgld_steps, self.sgld_lr, self.sgld_std, self.reinit_freq,
                                             if_cond=self.if_cond, n_classes=self.n_classes)
             
@@ -118,12 +117,18 @@ class Energy(nn.Module):
                     visualize_images(path=self.path, replay_buffer_old=self.replay_buffer_old, replay_buffer=self.replay_buffer, energy_model=self.energy_model, 
                                     sgld_steps=self.sgld_steps, sgld_lr=self.sgld_lr, sgld_std=self.sgld_std, reinit_freq=self.reinit_freq,
                                     batch_size=100, n_classes=self.n_classes, im_sz=self.im_sz, n_ch=self.n_ch, device=x.device, counter=counter, step=i)
-                energes.append(energy_real)
                 self.logger.info("Step {}, Energy Loss: {}".format(i, energy_loss))
+
+                # closs = F.cross_entropy(outputs, target)
+                # acc = ((outputs.max(1)[1] == target).float().sum())/x.shape[0]
+                # self.logger.info("Step {}, Real Energy value: {}".format(i, energes))
+                # self.logger.info("Step {}, Classication Loss: {}".format(i, closs))
+                # self.logger.info("Step {}, Acc: {}".format(i,acc))
         else:
             self.energy_model.eval()
             with torch.no_grad():
                 outputs = self.energy_model.classify(x)
+                energes = self.energy_model(x).mean()
 
         return outputs, energes
 
@@ -185,5 +190,9 @@ def forward_and_adapt(x, energy_model, optimizer, replay_buffer, sgld_steps, sgl
     optimizer.step()
     optimizer.zero_grad()
 
+    energy_real_post = energy_model(x).mean()
+    energes = [energy_real.data.item(), energy_real_post.data.item()]
+
     outputs = energy_model.classify(x)
-    return outputs, loss.data.item(), energy_real.data.item()
+
+    return outputs, loss.data.item(), energes

@@ -1,14 +1,12 @@
-SAVE_DIR: ./save/tin200/group50
+SAVE_DIR: ./save/others/theory
 MODEL:
-  ADAPTATION: eata
-  ARCH: GN50 
+  ADAPTATION: tent
+  ARCH: Standard 
   ADA_PARAM:
-    - gn
-EATA:
-  USE_FISHER: False
+    - bn
 CORRUPTION:
-  DATASET: tin200
-  NUM_CLASSES: 200
+  DATASET: cifar10
+  NUM_CLASSES: 10
   IMG_SIZE: 32
   NUM_CHANNEL: 3
   SEVERITY:
@@ -36,7 +34,7 @@ CORRUPTION:
 OPTIM:
   BATCH_SIZE: 500
   METHOD: Adam
-  STEPS: 1
+  STEPS: 10
   BETA: 0.9
   LR: 0.0005
   WD: 0.

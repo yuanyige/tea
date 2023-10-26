@@ -8,7 +8,7 @@ from robustbench.utils import load_model
 
 from core.eval import evaluate_ori, evaluate_ood
 from core.conf import cfg, load_cfg_fom_args
-from core.utils import set_seed, set_logger, build_model
+from core.utils import set_seed, set_logger, build_model_res50gn, build_model_res18bn
 from core.setup.adapt import *
 
 logger = logging.getLogger(__name__)
@@ -22,8 +22,7 @@ def main(description):
 
     # configure base model
     if 'GN' in cfg.MODEL.ARCH:
-        depth = int(cfg.MODEL.ARCH[2:])
-        base_model = build_model(8, cfg.CORRUPTION.NUM_CLASSES).to(device)
+        base_model = build_model_res50gn(8, cfg.CORRUPTION.NUM_CLASSES).to(device)
         ckpt = torch.load('./ckpt/{}/ResNet50G.pth'.format(cfg.CORRUPTION.DATASET))
         base_model.load_state_dict(ckpt['state_dict'])
     else:
@@ -31,6 +30,10 @@ def main(description):
             base_model = load_model(cfg.MODEL.ARCH, cfg.CKPT_DIR, cfg.CORRUPTION.DATASET, ThreatModel.corruptions).to(device)
         elif (cfg.CORRUPTION.DATASET == 'mnist')or (cfg.CORRUPTION.DATASET == 'tin200') or (cfg.CORRUPTION.DATASET == 'cifar100' and cfg.MODEL.ARCH == 'Standard'):
             base_model = torch.load(os.path.join(cfg.CKPT_DIR, cfg.CORRUPTION.DATASET, str(cfg.MODEL.ARCH)+'.pt')).to(device)
+        elif cfg.CORRUPTION.DATASET == 'pacs':
+            base_model = build_model_res18bn(cfg.CORRUPTION.NUM_CLASSES).to(device)
+            ckpt = torch.load('./ckpt/{}/{}.pth'.format(cfg.CORRUPTION.DATASET,cfg.MODEL.ARCH))
+            base_model.load_state_dict(ckpt['state_dict'])
         else:
             raise NotImplementedError
 

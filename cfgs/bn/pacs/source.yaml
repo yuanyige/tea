@@ -1,0 +1,17 @@
+SAVE_DIR: ./save/pacs/art
+MODEL:
+  ADAPTATION: source
+  ARCH: art 
+  ADA_PARAM:
+    - bn
+CORRUPTION:
+  DATASET: pacs
+  NUM_CLASSES: 7
+  IMG_SIZE: 32
+  NUM_CHANNEL: 3
+  TYPE:
+    - photo
+    - cartoon
+    - sketch
+OPTIM:
+  BATCH_SIZE: 200

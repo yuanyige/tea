@@ -31,6 +31,14 @@ def set_transform(dataset):
             T.ToTensor(),
         ])
         transform_test = T.Compose([T.Resize(32), T.ToTensor()])
+    elif  'pacs' in dataset.lower():
+        transform_train = transforms.Compose([
+            T.Resize(32), 
+            T.RandomCrop(32, padding=4), 
+            T.RandomHorizontalFlip(),
+            T.ToTensor(),
+        ])
+        transform_test = T.Compose([T.Resize(32), T.ToTensor()])
     else:
         raise
     return transform_train, transform_test
@@ -60,8 +68,24 @@ def load_tin200(n_examples, severity=None, data_dir=None, shuffle=False, corrupt
 
     return x_test_tensor, y_test_tensor
 
+def load_pacs(data_dir=None, shuffle=False, corruptions=None, transform=None):
+    
+    dataset = datasets.ImageFolder(os.path.join(data_dir, 'pacs', corruptions), transform=transform) 
+    
+    batch_size = 100
+    test_loader = data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4)
 
-def load_data(data, n_examples=0, severity=None, data_dir=None, shuffle=False, corruptions=None):
+    x_test, y_test = [], []
+    for i, (x, y) in enumerate(test_loader):
+        x_test.append(x)
+        y_test.append(y)
+
+    x_test_tensor = torch.cat(x_test)
+    y_test_tensor = torch.cat(y_test)
+
+    return x_test_tensor, y_test_tensor
+
+def load_data(data, n_examples=None, severity=None, data_dir=None, shuffle=False, corruptions=None):
         if data == 'cifar10':
             x_test, y_test = load_cifar10(n_examples, data_dir)
         elif data == 'cifar100':
@@ -76,7 +100,11 @@ def load_data(data, n_examples=0, severity=None, data_dir=None, shuffle=False, c
         elif data == 'tin200c':
             _, transform = set_transform(data)
             x_test, y_test = load_tin200(n_examples=n_examples, severity=severity, data_dir=data_dir, shuffle=shuffle, corruptions=corruptions, transform=transform)
-        print(x_test.shape,n_examples)
+        elif data == 'pacs':
+            _, transform = set_transform(data)
+            x_test, y_test = load_pacs(data_dir=data_dir, shuffle=shuffle, corruptions=corruptions, transform=transform)
+        
+        print(x_test.shape, n_examples)
         return x_test, y_test
 
 def load_dataloader(root, dataset, batch_size, if_shuffle, logger=None):
@@ -97,49 +125,9 @@ def load_dataloader(root, dataset, batch_size, if_shuffle, logger=None):
         logger.info("using tin200..")
         train_dataset = datasets.ImageFolder(os.path.join(root, 'tiny-imagenet-200', 'train'), transform=train_transforms)
         test_dataset = datasets.ImageFolder(os.path.join(root, 'tiny-imagenet-200', 'val'), transform=test_transforms)
-    elif 'pacs' in dataset.lower():
-        logger.info("using pacs..")
-        train_dataset = datasets.ImageFolder(os.path.join(root, 'pacs', dataset.split('-')[1]), transform=train_transforms)
-        test_dataset = None
     else:
         raise
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size,  num_workers=4, shuffle=True)
     test_loader = torch.utils.data.DataLoader(dataset=test_dataset, batch_size=batch_size,  num_workers=4, shuffle=if_shuffle)
     return train_dataset, test_dataset, train_loader, test_loader
 
-
-# class SelectedRotateCIFAR10(datasets.CIFAR10):
-#     def __init__(
-#         self,
-#         root: str,
-#         train: bool = True,
-#         transform: Optional[Callable] = None,
-#         target_transform: Optional[Callable] = None,
-#         download: bool = False,
-#         original=True, rotation=True, rotation_transform=None
-#     ):
-#         super().__init__(root, train, transform, target_transform, download)
-
-#     def __getitem__(self, index):
-
-#         img_input = self.data[index]
-#         target = self.targets[index]
-
-#         if self.transform is not None:
-#             img_input = Image.fromarray(img_input)
-#             img = self.transform(img_input)
-#         else:
-#             img = img_input
-
-#         results = []
-#         results.append(img)
-#         results.append(target)
-#         return results
-
-#     def set_dataset_size(self, subset_size):
-#         num_train = len(self.targets)
-#         indices = list(range(num_train))
-#         random.shuffle(indices)
-#         self.data = [self.data[i] for i in indices[:subset_size]]
-#         self.targets = [self.targets[i] for i in indices[:subset_size]]
-#         return len(self.targets)

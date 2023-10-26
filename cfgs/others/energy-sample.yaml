@@ -1,9 +1,9 @@
 SAVE_DIR: ./save/samples/cifar10
 MODEL:
   ADAPTATION: energy
-  ARCH: Standard
+  ARCH: GN50 
   ADA_PARAM:
-    - bn
+    - gn
 EBM:
   UNCOND: uncond
   STEPS: 100

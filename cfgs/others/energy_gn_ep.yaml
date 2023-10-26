@@ -1,14 +1,20 @@
-SAVE_DIR: ./save/tin200/group50
+SAVE_DIR: ./save//epsodic/cifar100
 MODEL:
-  ADAPTATION: eata
-  ARCH: GN50 
+  ADAPTATION: energy
+  ARCH: GN50
   ADA_PARAM:
     - gn
-EATA:
-  USE_FISHER: False
+  EPISODIC: True
+EBM:
+  UNCOND: uncond
+  STEPS: 20
+  SGLD_LR: 0.1
+  SGLD_STD: 0.01
+  BUFFER_SIZE: 10000
+  REINIT_FREQ:  0.05
 CORRUPTION:
-  DATASET: tin200
-  NUM_CLASSES: 200
+  DATASET: cifar100
+  NUM_CLASSES: 100
   IMG_SIZE: 32
   NUM_CHANNEL: 3
   SEVERITY:
@@ -38,5 +44,5 @@ OPTIM:
   METHOD: Adam
   STEPS: 1
   BETA: 0.9
-  LR: 0.0005
+  LR: 0.0001
   WD: 0.
