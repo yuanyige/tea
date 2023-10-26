@@ -18,12 +18,12 @@ def main(description):
     set_seed(cfg)
     set_logger(cfg)
 
-    device = torch.device('cuda:0')
+    device = torch.device('cpu')
 
     # configure base model
     if 'GN' in cfg.MODEL.ARCH:
         base_model = build_model_res50gn(8, cfg.CORRUPTION.NUM_CLASSES).to(device)
-        ckpt = torch.load('./ckpt/{}/ResNet50G.pth'.format(cfg.CORRUPTION.DATASET))
+        ckpt = torch.load(os.path.join(cfg.CKPT_DIR ,'{}/ResNet50G.pth'.format(cfg.CORRUPTION.DATASET)))
         base_model.load_state_dict(ckpt['state_dict'])
     else:
         if (cfg.CORRUPTION.DATASET == 'cifar10') or (cfg.CORRUPTION.DATASET == 'cifar100' and cfg.MODEL.ARCH != 'Standard'):
@@ -32,7 +32,7 @@ def main(description):
             base_model = torch.load(os.path.join(cfg.CKPT_DIR, cfg.CORRUPTION.DATASET, str(cfg.MODEL.ARCH)+'.pt')).to(device)
         elif cfg.CORRUPTION.DATASET == 'pacs':
             base_model = build_model_res18bn(cfg.CORRUPTION.NUM_CLASSES).to(device)
-            ckpt = torch.load('./ckpt/{}/{}.pth'.format(cfg.CORRUPTION.DATASET,cfg.MODEL.ARCH))
+            ckpt = torch.load(os.path.join(cfg.CKPT_DIR ,'{}/{}.pth'.format(cfg.CORRUPTION.DATASET,cfg.MODEL.ARCH)))
             base_model.load_state_dict(ckpt['state_dict'])
         else:
             raise NotImplementedError

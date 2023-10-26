@@ -125,6 +125,9 @@ def load_dataloader(root, dataset, batch_size, if_shuffle, logger=None):
         logger.info("using tin200..")
         train_dataset = datasets.ImageFolder(os.path.join(root, 'tiny-imagenet-200', 'train'), transform=train_transforms)
         test_dataset = datasets.ImageFolder(os.path.join(root, 'tiny-imagenet-200', 'val'), transform=test_transforms)
+    elif 'pacs' in dataset.lower():
+        train_dataset = datasets.ImageFolder(os.path.join(root, 'pacs', dataset.split("-")[1]), transform=train_transforms) 
+        test_dataset = datasets.ImageFolder(os.path.join(root, 'pacs', dataset.split("-")[1]), transform=test_transforms) 
     else:
         raise
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size,  num_workers=4, shuffle=True)

@@ -58,7 +58,11 @@ def setup_eata(model, cfg, logger):
     # optimizer = torch.optim.SGD(params, 0.00025, momentum=0.9)
     if cfg.EATA.USE_FISHER:
         # compute fisher informatrix
-        _, fisher_dataset, _, fisher_loader = load_dataloader(root=cfg.DATA_DIR, dataset=cfg.CORRUPTION.DATASET, batch_size=cfg.OPTIM.BATCH_SIZE, if_shuffle=False, logger=logger)
+        if cfg.MODEL.ADAPTATION == 'eata':
+            dataset = "-".join([cfg.CORRUPTION.DATASET, cfg.MODEL.ARCH])
+        else:
+            dataset = cfg.CORRUPTION.DATASET
+        _, fisher_dataset, _, fisher_loader = load_dataloader(root=cfg.DATA_DIR, dataset=dataset, batch_size=cfg.OPTIM.BATCH_SIZE, if_shuffle=False, logger=logger)
         #fisher_dataset.set_dataset_size(cfg.EATA.FISHER_SIZE)
         model = configure_model(model)
         params, param_names = collect_params(model, logger=logger)
