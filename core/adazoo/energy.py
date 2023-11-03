@@ -1,13 +1,12 @@
 from copy import deepcopy
 import os
 import torch
-import torch.nn as nn
 import torch.jit
-from pytorch_fid import fid_score
-from torchvision.utils import save_image
-from core.utils import load_model_and_optimizer, copy_model_and_optimizer
+import torch.nn as nn
 import torch.nn.functional as F
-# inception_model = torchvision.models.inception_v3(pretrained=True)
+
+from torchvision.utils import save_image
+from core.setup.param import load_model_and_optimizer, copy_model_and_optimizer
 
 def init_random(bs, im_sz=32, n_ch=3):
     # im_sz = 32
@@ -103,7 +102,7 @@ class Energy(nn.Module):
         self.model_state, self.optimizer_state = \
             copy_model_and_optimizer(self.energy_model, self.optimizer)
 
-    def forward(self, x, if_adapt=True, counter=None, if_vis=False):
+    def forward(self, x, target, if_adapt=True, counter=None, if_vis=False):
         if self.episodic:
             self.reset()
         
@@ -124,6 +123,8 @@ class Energy(nn.Module):
                 # self.logger.info("Step {}, Real Energy value: {}".format(i, energes))
                 # self.logger.info("Step {}, Classication Loss: {}".format(i, closs))
                 # self.logger.info("Step {}, Acc: {}".format(i,acc))
+                self.logger.info("output: {}".format(F.softmax(outputs)[0].detach().cpu().numpy()))
+                self.logger.info("sort: {}".format(torch.sort(F.softmax(outputs)[0])[0].detach().cpu().numpy()))
         else:
             self.energy_model.eval()
             with torch.no_grad():

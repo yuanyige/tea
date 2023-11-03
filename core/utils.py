@@ -16,8 +16,8 @@ def set_seed(cfg):
     torch.manual_seed(cfg.RNG_SEED)
     torch.cuda.manual_seed(cfg.RNG_SEED)
     torch.cuda.manual_seed_all(cfg.RNG_SEED)
-    torch.backends.cudnn.deterministic = False #True
-    torch.backends.cudnn.benchmark = False #cfg.CUDNN.BENCHMARK
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = cfg.CUDNN.BENCHMARK
 
 def set_logger(cfg):
     os.makedirs(cfg.SAVE_DIR,exist_ok=True)

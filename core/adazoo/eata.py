@@ -2,27 +2,21 @@
 Copyright to EATA ICML 2022 Authors, 2022.03.20
 Based on Tent ICLR 2021 Spotlight. 
 """
-import os
 import math
-import random
-import numpy as np
-from PIL import Image
-from typing import Optional, Callable
 
 import torch
 import torch.jit
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision.transforms as transforms
-import torchvision.datasets as datasets
 
-from core.utils import load_model_and_optimizer, copy_model_and_optimizer
+#from core.utils import load_model_and_optimizer, copy_model_and_optimizer
+from core.setup.param import load_model_and_optimizer, copy_model_and_optimizer
 
 class EATA(nn.Module):
     """EATA adapts a model by entropy minimization during testing.
     Once EATAed, a model adapts itself by updating on every forward.
     """
-    def __init__(self, model, optimizer, fishers=None, fisher_alpha=2000.0, steps=1, episodic=False, e_margin=math.log(1000)/2-1, d_margin=0.05):
+    def __init__(self, model, optimizer, steps=1, fishers=None, fisher_alpha=2000.0, episodic=False, e_margin=math.log(1000)/2-1, d_margin=0.05):
         super().__init__()
         self.model = model
         self.optimizer = optimizer

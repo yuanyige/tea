@@ -1,0 +1,22 @@
+SAVE_DIR: ./save/pacs/sketch
+MODEL:
+  ADAPTATION: tent
+  ARCH: sketch 
+  ADA_PARAM:
+    - bn
+CORRUPTION:
+  DATASET: pacs
+  NUM_CLASSES: 7
+  IMG_SIZE: 32
+  NUM_CHANNEL: 3
+  TYPE:
+    - art
+    - photo
+    - cartoon
+OPTIM:
+  BATCH_SIZE: 5000
+  METHOD: Adam
+  STEPS: 10
+  BETA: 0.9
+  LR: 0.001
+  WD: 0.

@@ -1,7 +1,7 @@
-SAVE_DIR: ./save/pacs/art
+SAVE_DIR: ./save/pacs/sketch
 MODEL:
   ADAPTATION: energy
-  ARCH: art 
+  ARCH: sketch 
   ADA_PARAM:
     - bn
 EBM:
@@ -17,13 +17,13 @@ CORRUPTION:
   IMG_SIZE: 32
   NUM_CHANNEL: 3
   TYPE:
+    - art
     - photo
     - cartoon
-    - sketch
 OPTIM:
-  BATCH_SIZE: 2000
+  BATCH_SIZE: 5000
   METHOD: Adam
-  STEPS: 10
+  STEPS: 20
   BETA: 0.9
-  LR: 0.003
+  LR: 0.002
   WD: 0.

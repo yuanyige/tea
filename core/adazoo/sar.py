@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.jit
 import math
 import numpy as np
-from core.utils import load_model_and_optimizer, copy_model_and_optimizer
+from core.setup.param import load_model_and_optimizer, copy_model_and_optimizer
 
 def update_ema(ema, new_data):
     if ema is None:
@@ -140,6 +140,42 @@ def collect_params(model):
 
     return params, names
 
+
+
+def collect_params_sar(model, logger=None):
+    """Collect the affine scale + shift parameters from norm layers.
+    Walk the model's modules and collect all normalization parameters.
+    Return the parameters and their names.
+    Note: other choices of parameterization are possible!
+    """
+    logger.info('adapting weights for SAR')
+    params = []
+    names = []
+    for nm, m in model.named_modules():
+        # skip top layers for adaptation: layer4 for ResNets and blocks9-11 for Vit-Base
+        if 'layer4' in nm:
+            continue
+        # if 'block3' in nm:
+        #     print("skiping")
+        #     continue
+        if 'blocks.9' in nm:
+            continue
+        if 'blocks.10' in nm:
+            continue
+        if 'blocks.11' in nm:
+            continue
+        if 'norm.' in nm:
+            continue
+        if nm in ['norm']:
+            continue
+
+        if isinstance(m, (nn.BatchNorm2d, nn.LayerNorm, nn.GroupNorm)):
+            for np, p in m.named_parameters():
+                if np in ['weight', 'bias']:  # weight is scale, bias is shift
+                    params.append(p)
+                    names.append(f"{nm}.{np}")
+
+    return params, names
 
 # def copy_model_and_optimizer(model, optimizer):
 #     """Copy the model and optimizer states for resetting after adaptation."""

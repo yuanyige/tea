@@ -1,4 +1,4 @@
-SAVE_DIR: ./save/others/theory
+SAVE_DIR: ./save/others/logits
 MODEL:
   ADAPTATION: tent
   ARCH: Standard 
@@ -32,9 +32,9 @@ CORRUPTION:
     - pixelate
     - jpeg_compression
 OPTIM:
-  BATCH_SIZE: 500
+  BATCH_SIZE: 200
   METHOD: Adam
-  STEPS: 10
+  STEPS: 100
   BETA: 0.9
-  LR: 0.0005
+  LR: 0.001
   WD: 0.

@@ -1,0 +1,24 @@
+SAVE_DIR: ./save/pacs/sketch
+MODEL:
+  ADAPTATION: eta
+  ARCH: sketch 
+  ADA_PARAM:
+    - bn
+EATA:
+  USE_FISHER: False
+CORRUPTION:
+  DATASET: pacs
+  NUM_CLASSES: 7
+  IMG_SIZE: 32
+  NUM_CHANNEL: 3
+  TYPE:
+    - art
+    - photo
+    - cartoon
+OPTIM:
+  BATCH_SIZE: 5000
+  METHOD: Adam
+  STEPS: 1
+  BETA: 0.9
+  LR: 0.001
+  WD: 0.

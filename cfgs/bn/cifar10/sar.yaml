@@ -1,4 +1,4 @@
-SAVE_DIR: ./save/cifar10/standard_skiptop
+SAVE_DIR: ./save/cifar10/standard_new
 MODEL:
   ADAPTATION: sar
   ARCH: Standard
@@ -33,5 +33,5 @@ CORRUPTION:
     - jpeg_compression
 OPTIM:
   BATCH_SIZE: 200
-  STEPS: 1
+  STEPS: 2
   LR: 0.001

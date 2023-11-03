@@ -134,7 +134,7 @@ _C.LOG_TIME = ''
 # # Config destination (in SAVE_DIR)
 # _C.CFG_DEST = "cfg.yaml"
 
-# ------------------------------- EBM options --------------------------- #
+# ------------------------------- TEA options --------------------------- #
 
 _C.EBM = CfgNode()
 
@@ -169,12 +169,30 @@ _C.EATA.E_MARGIN = math.log(1000)*0.40
 # epsilon in Eqn. (5) for filtering redundant samples
 _C.EATA.D_MARGIN = 0.05
 
-# ------------------------------- ESARATA options --------------------------- #
+# ------------------------------- SAR options --------------------------- #
 
 _C.SAR = CfgNode()
 
 # the threshold for reliable minimization in SAR, Eqn. (2)
 _C.SAR.MARGIN_E0 = math.log(1000)*0.40
+
+# ------------------------------- SHOT options --------------------------- #
+
+_C.SHOT = CfgNode()
+
+_C.SHOT.THRESHOLD = 0.9
+
+_C.SHOT.CLF_COEFF = 0.1
+
+_C.SHOT.ALPHA = 0.1 #1.0 10.0
+
+# ------------------------------- PL options --------------------------- #
+
+_C.PL = CfgNode()
+
+_C.PL.THRESHOLD = 0.9
+
+_C.PL.ALPHA = 0.1 #1.0 10.0
 
 # --------------------------------- Default config -------------------------- #
 _CFG_DEFAULT = _C.clone()

@@ -1,4 +1,5 @@
 import torch.nn as nn
+from copy import deepcopy
 
 def collect_params(model, ada_param=['bn'], logger=None):
     """Collect the affine scale + shift parameters from batch norms.
@@ -48,42 +49,6 @@ def collect_params(model, ada_param=['bn'], logger=None):
     return params, names
 
 
-def collect_params_sar(model, logger=None):
-    """Collect the affine scale + shift parameters from norm layers.
-    Walk the model's modules and collect all normalization parameters.
-    Return the parameters and their names.
-    Note: other choices of parameterization are possible!
-    """
-    logger.info('adapting weights for SAR')
-    params = []
-    names = []
-    for nm, m in model.named_modules():
-        # skip top layers for adaptation: layer4 for ResNets and blocks9-11 for Vit-Base
-        if 'layer4' in nm:
-            continue
-        # if 'block3' in nm:
-        #     print("skiping")
-        #     continue
-        if 'blocks.9' in nm:
-            continue
-        if 'blocks.10' in nm:
-            continue
-        if 'blocks.11' in nm:
-            continue
-        if 'norm.' in nm:
-            continue
-        if nm in ['norm']:
-            continue
-
-        if isinstance(m, (nn.BatchNorm2d, nn.LayerNorm, nn.GroupNorm)):
-            for np, p in m.named_parameters():
-                if np in ['weight', 'bias']:  # weight is scale, bias is shift
-                    params.append(p)
-                    names.append(f"{nm}.{np}")
-
-    return params, names
-
-
 def configure_model(model, ada_param=['bn']):
     """Configure model for use with tent."""
     # train mode, because tent optimizes the model to minimize entropy
@@ -121,3 +86,15 @@ def configure_model(model, ada_param=['bn']):
             if isinstance(m, nn.Linear):
                 m.requires_grad_(True)
     return model
+
+
+def copy_model_and_optimizer(model, optimizer):
+    """Copy the model and optimizer states for resetting after adaptation."""
+    model_state = deepcopy(model.state_dict())
+    optimizer_state = deepcopy(optimizer.state_dict())
+    return model_state, optimizer_state
+
+def load_model_and_optimizer(model, optimizer, model_state, optimizer_state):
+    """Restore the model and optimizer states from copies."""
+    model.load_state_dict(model_state, strict=True)
+    optimizer.load_state_dict(optimizer_state)

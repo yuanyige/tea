@@ -18,7 +18,7 @@ def main(description):
     set_seed(cfg)
     set_logger(cfg)
 
-    device = torch.device('cpu')
+    device = torch.device('cuda:0')
 
     # configure base model
     if 'GN' in cfg.MODEL.ARCH:
@@ -59,6 +59,12 @@ def main(description):
     elif cfg.MODEL.ADAPTATION == "sar":
         logger.info("test-time adaptation: SAR")
         model = setup_sar(base_model, cfg, logger)
+    elif cfg.MODEL.ADAPTATION == "shot":
+        logger.info("test-time adaptation: SHOT")
+        model = setup_shot(base_model, cfg, logger)
+    elif cfg.MODEL.ADAPTATION == "pl":
+        logger.info("test-time adaptation: PL")
+        model = setup_pl(base_model, cfg, logger)
     else:
         raise NotImplementedError
     

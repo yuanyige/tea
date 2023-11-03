@@ -5,17 +5,15 @@ import math
 import torch
 import torch.nn.functional as F
 
-import robustbench
 from core.setup.data import load_data, load_dataloader
 from autoattack import AutoAttack
-
 from torchvision.utils import save_image
+
 
 def clean_accuracy(model, x, y, batch_size = 100, logger=None, device = None, ada=None, if_adapt=True, if_vis=False):
     if device is None:
         device = x.device
     acc = 0.
-    loss = 0.
     n_batches = math.ceil(x.shape[0] / batch_size)
     with torch.no_grad():
         energes_list=[]
@@ -24,23 +22,18 @@ def clean_accuracy(model, x, y, batch_size = 100, logger=None, device = None, ad
                        batch_size].to(device)
             y_curr = y[counter * batch_size:(counter + 1) *
                        batch_size].to(device)
-            #save_image(x_curr[:16].detach().cpu() , 'real_samples.png', padding=2, nrow=8)
 
             if ada == 'source':
                 output = model(x_curr)
-                # closs = F.cross_entropy(output, y_curr)
-                # acc = ((output.max(1)[1] == y_curr).float().sum())/x_curr.shape[0]
-                # logger.info("Step -1, Classication Loss: {}".format(closs))
-                # logger.info("Step -1, Acc: {}".format(acc))
-                # logger.info("Step -1, Energy Score: {}".format(output.logsumexp(1).mean()))
+
             else:
                 if ada == 'energy':
-                    output, energes = model(x_curr, if_adapt=if_adapt, counter=counter, if_vis=if_vis)
+                    output, energes = model(x_curr, y_curr, if_adapt=if_adapt, counter=counter, if_vis=if_vis)
                     energes_list.append(energes)
+                    exit(0)
                 else:
                     output = model(x_curr, if_adapt=if_adapt, counter=counter, if_vis=if_vis)
 
-            #loss += F.cross_entropy(output, y_curr, reduction='sum')
             acc += (output.max(1)[1] == y_curr).float().sum()
         
         if len(energes_list) > 0:
@@ -50,7 +43,7 @@ def clean_accuracy(model, x, y, batch_size = 100, logger=None, device = None, ad
             else:
                 energes = energes.mean()
             return acc.item() / x.shape[0], energes
-
+    
     return acc.item() / x.shape[0]
 
 
@@ -91,8 +84,6 @@ def evaluate_ood(model, cfg, logger, device):
         res_en2 = np.zeros((len(cfg.CORRUPTION.SEVERITY),len(cfg.CORRUPTION.TYPE)))
         for c in range(len(cfg.CORRUPTION.TYPE)):
             for s in range(len(cfg.CORRUPTION.SEVERITY)):
-                # reset adaptation for each combination of corruption x severity
-                # note: for evaluation protocol, but not necessarily needed
                 try:
                     model.reset()
                     logger.info("resetting model")
@@ -103,7 +94,7 @@ def evaluate_ood(model, cfg, logger, device):
                                             [cfg.CORRUPTION.TYPE[c]])
                 x_test, y_test = x_test.to(device), y_test.to(device)
                 out = clean_accuracy(model, x_test, y_test, cfg.OPTIM.BATCH_SIZE, logger=logger, ada=cfg.MODEL.ADAPTATION, if_adapt=True)
-                
+
                 if cfg.MODEL.ADAPTATION == 'energy':
                     acc, energes = out
                     if len(energes.tolist()) > 1:
@@ -146,7 +137,7 @@ def evaluate_ood(model, cfg, logger, device):
         for target_domain in cfg.CORRUPTION.TYPE:
             x_test, y_test = load_data(data = cfg.CORRUPTION.DATASET, data_dir=cfg.DATA_DIR, shuffle = True, corruptions=target_domain)
             x_test, y_test = x_test.to(device), y_test.to(device)
-            out = clean_accuracy(model, x_test, y_test, cfg.OPTIM.BATCH_SIZE, logger=logger, ada=cfg.MODEL.ADAPTATION, if_adapt=True)
+            out = clean_accuracy(model, x_test, y_test, cfg.OPTIM.BATCH_SIZE, logger=logger, ada=cfg.MODEL.ADAPTATION, if_adapt=True, if_vis=True)
             if cfg.MODEL.ADAPTATION == 'energy':
                 acc = out[0]
             else:
@@ -178,6 +169,7 @@ def evaluate_ori(model, cfg, logger,device):
             else:
                 acc = out
             logger.info("Test set Accuracy: {}".format(acc))
+
         elif 'pacs' in cfg.CORRUPTION.DATASET:
             pass
         else:

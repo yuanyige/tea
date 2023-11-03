@@ -1,9 +1,9 @@
-SAVE_DIR: ./save/cifar10/group50
+SAVE_DIR: ./save/others/calibration
 MODEL:
   ADAPTATION: sar
-  ARCH: GN50
+  ARCH: Standard
   ADA_PARAM:
-    - gn
+    - bn
 CORRUPTION:
   DATASET: cifar10
   NUM_CLASSES: 10
@@ -32,6 +32,6 @@ CORRUPTION:
     - pixelate
     - jpeg_compression
 OPTIM:
-  BATCH_SIZE: 64
-  STEPS: 1
-  LR: 0.00025
+  BATCH_SIZE: 200
+  STEPS: 3
+  LR: 0.001

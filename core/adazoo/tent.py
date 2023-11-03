@@ -1,7 +1,9 @@
 import torch
-import torch.nn as nn
 import torch.jit
-from core.utils import load_model_and_optimizer, copy_model_and_optimizer
+import torch.nn as nn
+import torch.nn.functional as F
+
+from core.setup.param import load_model_and_optimizer, copy_model_and_optimizer
 
 class Tent(nn.Module):
     """Tent adapts a model by entropy minimization during testing.
@@ -29,6 +31,8 @@ class Tent(nn.Module):
             #print("adaptating..")
             for _ in range(self.steps):
                 outputs = forward_and_adapt(x, self.model, self.optimizer)
+                print("output: {}".format(F.softmax(outputs)[0].detach().cpu().numpy()))
+                print("sort: {}".format(torch.sort(F.softmax(outputs)[0])[0].detach().cpu().numpy()))
         else:
             #print("no adaptation")
             self.model.eval()
