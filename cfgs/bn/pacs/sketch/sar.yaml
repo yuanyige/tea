@@ -10,12 +10,10 @@ CORRUPTION:
   IMG_SIZE: 32
   NUM_CHANNEL: 3
   TYPE:
-    - art
     - photo
+    - art
     - cartoon
 OPTIM:
   BATCH_SIZE: 5000
-  STEPS: 30
-  LR: 0.0005
-SAR:
-  MARGIN_E0: 4.
+  STEPS: 20
+  LR: 0.0001

@@ -26,9 +26,9 @@ class EnergyModel(nn.Module):
     def forward(self, x, y=None):
         logits = self.classify(x)
         if y is None:
-            return logits.logsumexp(1)
+            return logits.logsumexp(1), logits
         else:
-            return torch.gather(logits, 1, y[:, None])
+            return torch.gather(logits, 1, y[:, None]), logits
         
 
 def sample_p_0(reinit_freq, replay_buffer, bs, im_sz, n_ch, device, y=None):
@@ -44,6 +44,20 @@ def sample_p_0(reinit_freq, replay_buffer, bs, im_sz, n_ch, device, y=None):
     samples = choose_random * random_samples + (1 - choose_random) * buffer_samples
     return samples.to(device), inds
 
+# def sample_p0_from_px(reinit_freq, replay_buffer, bs, im_sz, n_ch, device, x, y=None):
+#     if len(replay_buffer) == 0:
+#         return init_random(bs, im_sz=im_sz, n_ch=n_ch), []
+#     buffer_size = len(replay_buffer)
+#     inds = torch.randint(0, buffer_size, (bs,))
+#     # if cond, convert inds to class conditional inds
+
+#     buffer_samples = replay_buffer[inds]
+#     random_samples = init_random(bs, im_sz=im_sz, n_ch=n_ch)
+#     choose_random = (torch.rand(bs) < reinit_freq).float()[:, None, None, None]
+#     samples = choose_random * random_samples + (1 - choose_random) * buffer_samples
+
+#     return samples.to(device), inds
+
 def sample_q(f, replay_buffer, n_steps, sgld_lr, sgld_std, reinit_freq, batch_size, im_sz, n_ch, device, y=None):
     """this func takes in replay_buffer now so we have the option to sample from
     scratch (i.e. replay_buffer==[]).  See test_wrn_ebm.py for example.
@@ -53,11 +67,12 @@ def sample_q(f, replay_buffer, n_steps, sgld_lr, sgld_std, reinit_freq, batch_si
     bs = batch_size if y is None else y.size(0)
     # generate initial samples and buffer inds of those samples (if buffer is used)
     init_sample, buffer_inds = sample_p_0(reinit_freq=reinit_freq, replay_buffer=replay_buffer, bs=bs, im_sz=im_sz, n_ch=n_ch, device=device ,y=y)
+    #init_sample = x
     init_samples = deepcopy(init_sample)
     x_k = torch.autograd.Variable(init_sample, requires_grad=True)
     # sgld
     for k in range(n_steps):
-        f_prime = torch.autograd.grad(f(x_k, y=y).sum(), [x_k], retain_graph=True)[0]
+        f_prime = torch.autograd.grad(f(x_k, y=y)[0].sum(), [x_k], retain_graph=True)[0]
         x_k.data += sgld_lr * f_prime + sgld_std * torch.randn_like(x_k)
     f.train()
     final_samples = x_k.detach()
@@ -123,8 +138,8 @@ class Energy(nn.Module):
                 # self.logger.info("Step {}, Real Energy value: {}".format(i, energes))
                 # self.logger.info("Step {}, Classication Loss: {}".format(i, closs))
                 # self.logger.info("Step {}, Acc: {}".format(i,acc))
-                self.logger.info("output: {}".format(F.softmax(outputs)[0].detach().cpu().numpy()))
-                self.logger.info("sort: {}".format(torch.sort(F.softmax(outputs)[0])[0].detach().cpu().numpy()))
+                # self.logger.info("output: {}".format(F.softmax(outputs)[0].detach().cpu().numpy()))
+                # self.logger.info("sort: {}".format(torch.sort(F.softmax(outputs)[0])[0].detach().cpu().numpy()))
         else:
             self.energy_model.eval()
             with torch.no_grad():
@@ -139,6 +154,16 @@ class Energy(nn.Module):
         load_model_and_optimizer(self.energy_model, self.optimizer,
                                  self.model_state, self.optimizer_state)
 
+    # def configure_model_optimizer(self, algorithm, alpha, lr, wd):
+    #     adapted_algorithm = copy.deepcopy(algorithm)
+    #     optimizer = torch.optim.Adam(
+    #         adapted_algorithm.parameters(), 
+    #         # adapted_algorithm.classifier.parameters(), 
+    #         lr = lr  * alpha,
+    #         weight_decay = wd
+    #     )
+    #     return adapted_algorithm, optimizer
+        
 @torch.enable_grad()
 def visualize_images(path, replay_buffer_old, replay_buffer, energy_model, 
                      sgld_steps, sgld_lr, sgld_std, reinit_freq,
@@ -183,16 +208,31 @@ def forward_and_adapt(x, energy_model, optimizer, replay_buffer, sgld_steps, sgl
                              batch_size=batch_size, im_sz=im_sz, n_ch=n_ch, device=device, y=y)
 
     # forward
-    energy_real = energy_model(x).mean()
-    energy_fake = energy_model(x_fake).mean()
+    out_real = energy_model(x)
+    energy_real = out_real[0].mean()
+    energy_fake = energy_model(x_fake)[0].mean()
+
+    # outputs = out_real[1]
+    # py, y_prime = F.softmax(outputs, dim=-1).max(1)
+    # flag = py > 0.9
+    # clf_loss = F.cross_entropy(outputs[flag], y_prime[flag])
+    # print("pl")
+    
+    # # (2) diversity
+    # softmax_out = F.softmax(outputs, dim=-1)
+    # msoftmax = softmax_out.mean(dim=0)
+    # ent_loss = torch.sum(msoftmax * torch.log(msoftmax + 1e-5))
+
     # adapt
-    loss = - (energy_real - energy_fake)
+    #lamb=0.05
+    loss = (- (energy_real - energy_fake)) #+ (1-lamb) * ent_loss + 0.3 * clf_loss
     loss.backward()
     optimizer.step()
     optimizer.zero_grad()
 
-    energy_real_post = energy_model(x).mean()
-    energes = [energy_real.data.item(), energy_real_post.data.item()]
+    # energy_real_post = energy_model(x).mean()
+    # energes = [energy_real.data.item(), energy_real_post.data.item()]
+    energes=[0,0]
 
     outputs = energy_model.classify(x)
 

@@ -87,6 +87,9 @@ def build_model_res18bn(num_classes):
     print('Building model...')
     return ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes, norm_layer=nn.BatchNorm2d)
 
+def build_model_res50in(num_classes):
+    print('Building model...')
+    return ResNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes, norm_layer=nn.InstanceNorm2d)
 
 # def build_model(group_norm, depth, num_classes):
 #     print('Building model...')

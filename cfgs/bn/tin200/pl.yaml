@@ -1,12 +1,10 @@
-SAVE_DIR: ./save/tin200/standard
+SAVE_DIR: ./save/tin200/bn-wrn-28-10/original
 MODEL:
   ADAPTATION: shot
   ARCH: Standard
-  ADA_PARAM:
-    - bn
 PL:
   THRESHOLD: 0.9
-  ALPHA: 0.1 #0.1 1.0 10.0
+  ALPHA: 0.1 
 CORRUPTION:
   DATASET: tin200
   NUM_CLASSES: 200
@@ -37,7 +35,7 @@ CORRUPTION:
 OPTIM:
   BATCH_SIZE: 1000
   METHOD: Adam
-  STEPS: 2
+  STEPS: 1
   BETA: 0.9
-  LR: 0.0001
+  LR: 0.00005
   WD: 0.

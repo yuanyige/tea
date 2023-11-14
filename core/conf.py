@@ -184,8 +184,6 @@ _C.SHOT.THRESHOLD = 0.9
 
 _C.SHOT.CLF_COEFF = 0.1
 
-_C.SHOT.ALPHA = 0.1 #1.0 10.0
-
 # ------------------------------- PL options --------------------------- #
 
 _C.PL = CfgNode()
@@ -231,10 +229,10 @@ def reset_cfg():
     cfg.merge_from_other_cfg(_CFG_DEFAULT)
 
 
-def load_cfg_fom_args(description="Config options."):
+def load_cfg_fom_args():
     """Load config from command line args and set any specified options."""
     current_time = datetime.now().strftime("%y%m%d-%H%M%S")
-    parser = argparse.ArgumentParser(description=description)
+    parser = argparse.ArgumentParser(description='TTA Evalution')
     parser.add_argument("--cfg", dest="cfg_file", type=str, required=True,
                         help="Config file location")
     parser.add_argument("opts", default=None, nargs=argparse.REMAINDER,
@@ -252,10 +250,8 @@ def load_cfg_fom_args(description="Config options."):
         ebm_list=[str(cfg.EBM.UNCOND), str(cfg.EBM.STEPS), str(cfg.EBM.SGLD_LR), str(cfg.EBM.SGLD_STD), str(cfg.EBM.BUFFER_SIZE), str(cfg.EBM.REINIT_FREQ)]
         log_dest = os.path.basename(args.cfg_file)
         log_dest = log_dest.replace('.yaml', '_{}_{}_{}_{}.txt'.format("-".join(cfg.MODEL.ADA_PARAM), "-".join(opt_list), "-".join(ebm_list), current_time))
-        folder_name = "_".join(log_dest.split("_")[:-1])
-        cfg.SAVE_DIR = os.path.join(cfg.SAVE_DIR, folder_name)
-        #print('cfg.SAVE_DIR',cfg.SAVE_DIR,log_dest)
-        #exit(0)
+        # folder_name = "_".join(log_dest.split("_")[:-1])
+        # cfg.SAVE_DIR = os.path.join(cfg.SAVE_DIR, folder_name)
         g_pathmgr.mkdirs(cfg.SAVE_DIR)
     else:
         log_dest = os.path.basename(args.cfg_file)

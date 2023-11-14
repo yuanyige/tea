@@ -1,0 +1,13 @@
+SAVE_DIR: ./save/mnist/group
+MODEL:
+  ADAPTATION: source
+  ARCH: GN18
+  ADA_PARAM:
+    - gn
+CORRUPTION:
+  DATASET: mnist
+  NUM_CLASSES: 10
+  IMG_SIZE: 28
+  NUM_CHANNEL: 1
+OPTIM:
+  BATCH_SIZE: 200

@@ -1,13 +1,10 @@
-SAVE_DIR: ./save/tin200/standard
+SAVE_DIR: ./save/tin200/bn-wrn-28-10/original
 MODEL:
   ADAPTATION: shot
   ARCH: Standard
-  ADA_PARAM:
-    - bn
 SHOT:
   THRESHOLD: 0.9
   CLF_COEFF: 0.1
-  ALPHA: 0.1 #0.1 1.0 10.0
 CORRUPTION:
   DATASET: tin200
   NUM_CLASSES: 200
@@ -36,9 +33,9 @@ CORRUPTION:
     - pixelate
     - jpeg_compression
 OPTIM:
-  BATCH_SIZE: 1000
+  BATCH_SIZE: 200
   METHOD: Adam
-  STEPS: 2
+  STEPS: 1
   BETA: 0.9
-  LR: 0.0001
+  LR: 0.00001
   WD: 0.

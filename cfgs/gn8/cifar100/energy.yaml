@@ -1,0 +1,47 @@
+SAVE_DIR: ./save/cifar100/gn-8-res50
+MODEL:
+  ADAPTATION: energy
+  ARCH: GN50_8
+  ADA_PARAM:
+    - gn
+EBM:
+  UNCOND: uncond
+  STEPS: 20
+  SGLD_LR: 0.1
+  SGLD_STD: 0.01
+  BUFFER_SIZE: 10000
+  REINIT_FREQ: 0.05
+CORRUPTION:
+  DATASET: cifar100
+  NUM_CLASSES: 100
+  IMG_SIZE: 32
+  NUM_CHANNEL: 3
+  SEVERITY:
+    - 5
+    - 4
+    - 3
+    - 2
+    - 1
+  TYPE:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+    - zoom_blur
+    - snow
+    - frost
+    - fog
+    - brightness
+    - contrast
+    - elastic_transform
+    - pixelate
+    - jpeg_compression
+OPTIM:
+  BATCH_SIZE: 20
+  METHOD: Adam
+  STEPS: 1
+  BETA: 0.9
+  LR: 0.00001
+  WD: 0.

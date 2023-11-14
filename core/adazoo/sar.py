@@ -169,7 +169,7 @@ def collect_params_sar(model, logger=None):
         if nm in ['norm']:
             continue
 
-        if isinstance(m, (nn.BatchNorm2d, nn.LayerNorm, nn.GroupNorm)):
+        if isinstance(m, (nn.BatchNorm2d, nn.LayerNorm, nn.GroupNorm, nn.InstanceNorm2d)):
             for np, p in m.named_parameters():
                 if np in ['weight', 'bias']:  # weight is scale, bias is shift
                     params.append(p)

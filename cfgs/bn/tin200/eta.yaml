@@ -1,4 +1,4 @@
-SAVE_DIR: ./save/tin200/standard
+SAVE_DIR: ./save/tin200/bn-wrn-28-10/original
 MODEL:
   ADAPTATION: eata
   ARCH: Standard 
@@ -34,9 +34,9 @@ CORRUPTION:
     - pixelate
     - jpeg_compression
 OPTIM:
-  BATCH_SIZE: 1200
+  BATCH_SIZE: 1000
   METHOD: Adam
   STEPS: 1
   BETA: 0.9
-  LR: 0.001
+  LR: 0.0001
   WD: 0.

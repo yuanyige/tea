@@ -4,10 +4,10 @@ import math
 
 import torch
 import torch.nn.functional as F
-
-from core.setup.data import load_data, load_dataloader
 from autoattack import AutoAttack
 from torchvision.utils import save_image
+
+from core.setup.data import load_data, load_dataloader
 
 
 def clean_accuracy(model, x, y, batch_size = 100, logger=None, device = None, ada=None, if_adapt=True, if_vis=False):
@@ -28,9 +28,8 @@ def clean_accuracy(model, x, y, batch_size = 100, logger=None, device = None, ad
 
             else:
                 if ada == 'energy':
-                    output, energes = model(x_curr, y_curr, if_adapt=if_adapt, counter=counter, if_vis=if_vis)
+                    output, energes = model(x_curr, target=y_curr, if_adapt=if_adapt, counter=counter, if_vis=if_vis)
                     energes_list.append(energes)
-                    exit(0)
                 else:
                     output = model(x_curr, if_adapt=if_adapt, counter=counter, if_vis=if_vis)
 
@@ -62,7 +61,7 @@ def clean_accuracy_loader(model, test_loader, logger=None, device=None, ada=None
                     output = model(data)
                 else:
                     if ada == 'energy':
-                        output, energes = model(data, if_adapt=if_adapt, counter=counter, if_vis=if_vis)
+                        output, energes = model(data, target=target, if_adapt=if_adapt, counter=counter, if_vis=if_vis)
                     else:
                         output = model(data, if_adapt=if_adapt, counter=counter, if_vis=if_vis)
             test_loss += F.cross_entropy(output, target).item() 
@@ -129,7 +128,7 @@ def evaluate_ood(model, cfg, logger, device):
     
     elif cfg.CORRUPTION.DATASET == 'mnist':
         _, _, _, test_loader = load_dataloader(root=cfg.DATA_DIR, dataset=cfg.CORRUPTION.DATASET, batch_size=cfg.OPTIM.BATCH_SIZE, if_shuffle=False, logger=logger)
-        acc = clean_accuracy_loader(model, test_loader, logger=logger, device=device, if_adapt=True, if_vis=True)
+        acc = clean_accuracy_loader(model, test_loader, logger=logger, device=device, ada=cfg.MODEL.ADAPTATION,  if_adapt=True, if_vis=True)
         logger.info("Test set Accuracy: {}".format(acc))
     
     elif cfg.CORRUPTION.DATASET == 'pacs':
@@ -150,6 +149,12 @@ def evaluate_ood(model, cfg, logger, device):
         raise NotImplementedError
 
 def evaluate_adv(base_model, model, cfg, logger,device):
+        try:
+            model.reset()
+            logger.info("resetting model")
+        except:
+            logger.warning("not resetting model")
+
         x_test, y_test = load_data(cfg.CORRUPTION.DATASET, n_examples=cfg.CORRUPTION.NUM_EX, data_dir=cfg.DATA_DIR)
         x_test, y_test = x_test.to(device), y_test.to(device)
         adversary = AutoAttack(base_model, norm='L2', eps=0.5, version='custom', attacks_to_run=['apgd-ce'])
@@ -160,6 +165,12 @@ def evaluate_adv(base_model, model, cfg, logger,device):
 
 
 def evaluate_ori(model, cfg, logger,device):
+        try:
+            model.reset()
+            logger.info("resetting model")
+        except:
+            logger.warning("not resetting model")
+
         if 'cifar' in cfg.CORRUPTION.DATASET:
             x_test, y_test = load_data(cfg.CORRUPTION.DATASET, n_examples=cfg.CORRUPTION.NUM_EX, data_dir=cfg.DATA_DIR)
             x_test, y_test = x_test.to(device), y_test.to(device)
@@ -174,7 +185,7 @@ def evaluate_ori(model, cfg, logger,device):
             pass
         else:
             _,_,_,test_loader = load_dataloader(root=cfg.DATA_DIR, dataset=cfg.CORRUPTION.DATASET, batch_size=cfg.OPTIM.BATCH_SIZE, if_shuffle=False, logger=logger)
-            acc = clean_accuracy_loader(model, test_loader, logger=logger, device=device, if_adapt=True, if_vis=True)
+            acc = clean_accuracy_loader(model, test_loader, logger=logger, device=device, ada=cfg.MODEL.ADAPTATION, if_adapt=True, if_vis=False)
             logger.info("Test set Accuracy: {}".format(acc))
 
 

@@ -31,8 +31,8 @@ class Tent(nn.Module):
             #print("adaptating..")
             for _ in range(self.steps):
                 outputs = forward_and_adapt(x, self.model, self.optimizer)
-                print("output: {}".format(F.softmax(outputs)[0].detach().cpu().numpy()))
-                print("sort: {}".format(torch.sort(F.softmax(outputs)[0])[0].detach().cpu().numpy()))
+                # print("output: {}".format(F.softmax(outputs)[0].detach().cpu().numpy()))
+                # print("sort: {}".format(torch.sort(F.softmax(outputs)[0])[0].detach().cpu().numpy()))
         else:
             #print("no adaptation")
             self.model.eval()

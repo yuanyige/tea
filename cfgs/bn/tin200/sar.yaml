@@ -1,4 +1,4 @@
-SAVE_DIR: ./save/tin200/standard
+SAVE_DIR: ./save/tin200/bn-wrn-28-10/original
 MODEL:
   ADAPTATION: sar
   ARCH: Standard

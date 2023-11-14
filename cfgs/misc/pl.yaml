@@ -1,0 +1,41 @@
+SAVE_DIR: ./save/others/calibration
+MODEL:
+  ADAPTATION: pl
+  ARCH: Standard
+PL:
+  THRESHOLD: 0.3
+  ALPHA: 0.1 
+CORRUPTION:
+  DATASET: cifar10
+  NUM_CLASSES: 10
+  IMG_SIZE: 32
+  NUM_CHANNEL: 3
+  SEVERITY:
+    - 5
+    - 4
+    - 3
+    - 2
+    - 1
+  TYPE:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+    - zoom_blur
+    - snow
+    - frost
+    - fog
+    - brightness
+    - contrast
+    - elastic_transform
+    - pixelate
+    - jpeg_compression
+OPTIM:
+  BATCH_SIZE: 200
+  METHOD: Adam
+  STEPS: 2
+  BETA: 0.9
+  LR: 0.01
+  WD: 0.

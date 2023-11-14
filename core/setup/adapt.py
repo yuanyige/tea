@@ -38,7 +38,8 @@ def setup_tent(model, cfg, logger):
     collect the parameters for feature modulation by gradient optimization,
     set up the optimizer, and then tent the model.
     """
-    model = configure_model(model, ada_param=cfg.MODEL.ADA_PARAM)
+    model = configure_model(model, 
+                            ada_param=cfg.MODEL.ADA_PARAM)
     params, param_names = collect_params(model,
                                          ada_param=cfg.MODEL.ADA_PARAM,
                                          logger=logger)
@@ -54,14 +55,16 @@ def setup_tent(model, cfg, logger):
 def setup_eata(model, cfg, logger):
     if cfg.EATA.USE_FISHER:
         # compute fisher informatrix
-        if cfg.MODEL.ADAPTATION == 'eata':
+        if cfg.MODEL.ADAPTATION == 'eata' and cfg.CORRUPTION.DATASET == 'pacs':
             dataset = "-".join([cfg.CORRUPTION.DATASET, cfg.MODEL.ARCH])
         else:
             dataset = cfg.CORRUPTION.DATASET
         _, fisher_dataset, _, fisher_loader = load_dataloader(root=cfg.DATA_DIR, dataset=dataset, batch_size=cfg.OPTIM.BATCH_SIZE, if_shuffle=False, logger=logger)
         # fisher_dataset.set_dataset_size(cfg.EATA.FISHER_SIZE)
-        model = configure_model(model)
-        params, param_names = collect_params(model, logger=logger)
+        model = configure_model(model, ada_param=cfg.MODEL.ADA_PARAM)
+        params, param_names = collect_params(model, 
+                                             ada_param=cfg.MODEL.ADA_PARAM, 
+                                             logger=logger)
         optimizer = setup_optimizer(params, cfg, logger)
         ewc_optimizer = torch.optim.SGD(params, 0.001)
         fishers = {}
@@ -94,10 +97,11 @@ def setup_eata(model, cfg, logger):
                               d_margin=cfg.EATA.D_MARGIN)  
     else:
         print('fishers',None)
-        model = configure_model(model)
+        model = configure_model(model, 
+                                ada_param=cfg.MODEL.ADA_PARAM)
         params, param_names = collect_params(model,
-                                         ada_param=cfg.MODEL.ADA_PARAM,
-                                         logger=logger)
+                                             ada_param=cfg.MODEL.ADA_PARAM,
+                                             logger=logger)
         optimizer = setup_optimizer(params, cfg, logger)
         # optimizer = torch.optim.SGD(params, 0.00025, momentum=0.9)
         eta_model = eata.EATA(model, optimizer, 
@@ -112,7 +116,8 @@ def setup_eata(model, cfg, logger):
 def setup_energy(model, cfg, logger):
     """Set up TEA adaptation.
     """
-    model = configure_model(model, ada_param=cfg.MODEL.ADA_PARAM)
+    model = configure_model(model, 
+                            ada_param=cfg.MODEL.ADA_PARAM)
     params, param_names = collect_params(model, 
                                          ada_param=cfg.MODEL.ADA_PARAM,
                                          logger=logger)
@@ -139,7 +144,8 @@ def setup_energy(model, cfg, logger):
 def setup_sar(model, cfg, logger):
     """Set up SAR adaptation.
     """
-    model = configure_model(model, ada_param=cfg.MODEL.ADA_PARAM)
+    model = configure_model(model, 
+                            ada_param=cfg.MODEL.ADA_PARAM)
     params, param_names = sar.collect_params_sar(model, logger=logger)
     optimizer = setup_optimizer(params, cfg, logger)
    
@@ -156,15 +162,23 @@ def setup_shot(model, cfg, logger):
     """Set up SHOT adaptation.
     """
     # model.train()
-    adapt_model = shot.SHOT(model, 
+    model = configure_model(model, 
+                            ada_param=cfg.MODEL.ADA_PARAM)
+    params, param_names = collect_params(model, 
+                                        ada_param=cfg.MODEL.ADA_PARAM,
+                                        logger=logger)
+    optimizer = setup_optimizer(params, cfg, logger)
+    adapt_model = shot.SHOT(model, optimizer,
                             steps=cfg.OPTIM.STEPS,
                             threshold = cfg.SHOT.THRESHOLD, 
-                            clf_coeff=cfg.SHOT.CLF_COEFF,
-                            alpha = cfg.SHOT.ALPHA, 
-                            lr=cfg.OPTIM.LR, 
-                            wd=cfg.OPTIM.WD
+                            clf_coeff=cfg.SHOT.CLF_COEFF
+                            # alpha = cfg.SHOT.ALPHA, 
+                            # lr=cfg.OPTIM.LR, 
+                            # wd=cfg.OPTIM.WD,
                         )
     logger.info(f"model for adaptation: %s", model)
+    logger.info(f"params for adaptation: %s", param_names)
+    logger.info(f"optimizer for adaptation: %s", optimizer)
     return adapt_model
 
 def setup_pl(model, cfg, logger):
@@ -173,8 +187,8 @@ def setup_pl(model, cfg, logger):
     # model.train()
     adapt_model = pl.PseudoLabel(model, 
                             steps=cfg.OPTIM.STEPS,
-                            threshold = cfg.SHOT.THRESHOLD, 
-                            alpha = cfg.SHOT.ALPHA, 
+                            threshold = cfg.PL.THRESHOLD, 
+                            alpha = cfg.PL.ALPHA, 
                             lr=cfg.OPTIM.LR, 
                             wd=cfg.OPTIM.WD
                         )

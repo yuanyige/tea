@@ -9,27 +9,40 @@ def collect_params(model, ada_param=['bn'], logger=None):
     """
     params = []
     names = []
+
+    if 'all' in  ada_param:
+        logger.info('adapting all weights')
+        return model.parameters(), 'all'
+    
     if 'bn' in ada_param:
         logger.info('adapting weights of batch-normalization layer')
         for nm, m in model.named_modules():
-            if isinstance(m, nn.BatchNorm2d): #nn.GroupNorm nn.
+            if isinstance(m, nn.BatchNorm2d): 
                 for np, p in m.named_parameters():
                     if np in ['weight', 'bias']:  # weight is scale, bias is shift
                         params.append(p)
                         names.append(f"{nm}.{np}")
 
     if 'gn' in ada_param:
-        logger.info('adapting weights of batch-normalization layer')
+        logger.info('adapting weights of group-normalization layer')
         for nm, m in model.named_modules():
-            if 'layer4' in nm:
-                print("skiping")
-                continue
-            if isinstance(m, nn.GroupNorm): #nn.GroupNorm nn.BatchNorm2d
+            if isinstance(m, nn.GroupNorm): 
                 for np, p in m.named_parameters():
                     if np in ['weight', 'bias']:  # weight is scale, bias is shift
                         params.append(p)
                         names.append(f"{nm}.{np}")
     
+    if 'in' in ada_param:
+        logger.info('adapting weights of instance-normalization layer')
+        for nm, m in model.named_modules():
+            if isinstance(m, nn.InstanceNorm2d): 
+                for np, p in m.named_parameters():
+                    print(np)
+                    exit(0)
+                    if np in ['weight', 'bias']:  # weight is scale, bias is shift
+                        params.append(p)
+                        names.append(f"{nm}.{np}")
+
     if 'conv' in ada_param:
         logger.info('adapting weights of conv layer')
         for nm, m in model.named_modules():
@@ -49,17 +62,21 @@ def collect_params(model, ada_param=['bn'], logger=None):
     return params, names
 
 
-def configure_model(model, ada_param=['bn']):
+def configure_model(model, ada_param=None):
     """Configure model for use with tent."""
+
+    if 'all' in  ada_param:
+        return model
+
     # train mode, because tent optimizes the model to minimize entropy
     model.train()
     # disable grad, to (re-)enable only what tent updates
     model.requires_grad_(False)
-
+    
     if 'bn' in ada_param:
         # configure norm for model updates: enable grad + force batch statisics
         for m in model.modules():
-            if isinstance(m, nn.BatchNorm2d): #nn.BatchNorm2d
+            if isinstance(m, nn.BatchNorm2d):
                 m.requires_grad_(True)
                 # force use of batch stats in train and eval modes
                 m.track_running_stats = False
@@ -69,13 +86,23 @@ def configure_model(model, ada_param=['bn']):
     if 'gn' in ada_param:
         # configure norm for model updates: enable grad + force batch statisics
         for m in model.modules():
-            if isinstance(m, nn.GroupNorm): #nn.BatchNorm2d
+            if isinstance(m, nn.GroupNorm):
                 m.requires_grad_(True)
                 # force use of batch stats in train and eval modes
                 m.track_running_stats = False
                 m.running_mean = None
                 m.running_var = None
     
+    if 'in' in ada_param:
+        # configure norm for model updates: enable grad + force batch statisics
+        for m in model.modules():
+            if isinstance(m, nn.InstanceNorm2d): 
+                m.requires_grad_(True)
+                # force use of batch stats in train and eval modes
+                m.track_running_stats = False
+                m.running_mean = None
+                m.running_var = None
+
     if 'conv' in ada_param:
         for m in model.modules():
             if isinstance(m, nn.Conv2d):

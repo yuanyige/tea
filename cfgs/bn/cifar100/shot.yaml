@@ -1,13 +1,10 @@
-SAVE_DIR: ./save/cifar100/standard_new
+SAVE_DIR: ./save/cifar100/bn-wrn-28-10/original
 MODEL:
   ADAPTATION: shot
   ARCH: Standard
-  ADA_PARAM:
-    - bn
 SHOT:
   THRESHOLD: 0.9
-  CLF_COEFF: 0.1
-  ALPHA: 0.1 #0.1 1.0 10.0
+  CLF_COEFF: 0.3
 CORRUPTION:
   DATASET: cifar100
   NUM_CLASSES: 100
@@ -38,7 +35,7 @@ CORRUPTION:
 OPTIM:
   BATCH_SIZE: 200
   METHOD: Adam
-  STEPS: 2
+  STEPS: 1
   BETA: 0.9
-  LR: 0.00015
+  LR: 0.0001
   WD: 0.

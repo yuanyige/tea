@@ -29,7 +29,7 @@ class PseudoLabel(nn.Module):
         self.model_state, self.optimizer_state = \
             copy_model_and_optimizer(self.model, self.optimizer)
 
-    def forward(self, x, if_adapt=False, counter=None, if_vis=False):
+    def forward(self, x, if_adapt=True, counter=None, if_vis=False):
         if if_adapt:
             if self.episodic:
                 self.reset()

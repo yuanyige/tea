@@ -12,7 +12,7 @@ class SHOT(nn.Module):
     """
     "Do We Really Need to Access the Source Data? Source Hypothesis Transfer for Unsupervised Domain Adaptation"
     """
-    def __init__(self, algorithm, steps, threshold, clf_coeff, alpha, lr, wd):
+    def __init__(self, algorithm, optimizer, steps, threshold, clf_coeff):
         """
         Hparams
         -------
@@ -22,7 +22,8 @@ class SHOT(nn.Module):
         gamma (int) : number of updates
         """
         super().__init__()
-        self.model, self.optimizer = self.configure_model_optimizer(algorithm, alpha=alpha, lr=lr, wd=wd)
+        # self.model, self.optimizer = self.configure_model_optimizer(algorithm, alpha=alpha, lr=lr, wd=wd)
+        self.model, self.optimizer = algorithm,  optimizer
         self.beta = threshold
         self.theta = clf_coeff
         self.steps = steps
@@ -34,7 +35,7 @@ class SHOT(nn.Module):
         self.model_state, self.optimizer_state = \
             copy_model_and_optimizer(self.model, self.optimizer)
 
-    def forward(self, x, if_adapt=False, counter=None, if_vis=False):
+    def forward(self, x, if_adapt=True, counter=None, if_vis=False):
         if if_adapt:
             if self.episodic:
                 self.reset()
@@ -85,15 +86,15 @@ class SHOT(nn.Module):
         loss = ent_loss + self.theta * clf_loss
         return loss
 
-    def configure_model_optimizer(self, algorithm, alpha, lr, wd):
-        adapted_algorithm = copy.deepcopy(algorithm)
-        optimizer = torch.optim.Adam(
-            adapted_algorithm.parameters(), 
-            # adapted_algorithm.classifier.parameters(), 
-            lr = lr  * alpha,
-            weight_decay = wd
-        )
-        return adapted_algorithm, optimizer
+    # def configure_model_optimizer(self, algorithm, alpha, lr, wd):
+    #     adapted_algorithm = copy.deepcopy(algorithm)
+    #     optimizer = torch.optim.Adam(
+    #         adapted_algorithm.parameters(), 
+    #         # adapted_algorithm.classifier.parameters(), 
+    #         lr = lr  * alpha,
+    #         weight_decay = wd
+    #     )
+    #     return adapted_algorithm, optimizer
 
     def reset(self):
         if self.model_state is None or self.optimizer_state is None:

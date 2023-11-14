@@ -1,4 +1,4 @@
-SAVE_DIR: ./save/cifar100/standard_new
+SAVE_DIR: ./save/cifar100/bn-wrn-28-10/original
 MODEL:
   ADAPTATION: tent
   ARCH: Standard
@@ -32,9 +32,9 @@ CORRUPTION:
     - pixelate
     - jpeg_compression
 OPTIM:
-  BATCH_SIZE: 1000
+  BATCH_SIZE: 200
   METHOD: Adam
   STEPS: 1
   BETA: 0.9
-  LR: 1e-3
+  LR: 1e-8
   WD: 0.

@@ -8,9 +8,17 @@ import matplotlib.ticker as ticker
 import torch
 from torchmetrics.functional import calibration_error
 from core.setup.data import load_data
+from matplotlib.font_manager import FontProperties
+myfont=FontProperties(fname='.others/font/times.ttf')
+myfont2=FontProperties(fname='.others/font/times.ttf', size=13)
 
-
-def plot_calibration_hist(model, x, y, batch_size = 100, logger=None, device = None, ada=None, if_adapt=True, if_vis=False, c=None, s=None, myfont=None):
+def plot_calibration_hist(model, x, y, batch_size = 100, logger=None, device = None, ada=None, if_adapt=True, if_vis=False, c=None, s=None, myfont=myfont):
+    try:
+        model.reset()
+        logger.info("resetting model")
+    except:
+        logger.warning("not resetting model")
+    
     if device is None:
         device = x.device
     n_bins=10
@@ -84,26 +92,37 @@ def plot_calibration_hist(model, x, y, batch_size = 100, logger=None, device = N
     def thousands_formatter(x, pos):
         return '%1.0fk' % (x * 1e-3)
     
-    fig, ax1 = plt.subplots(figsize=(6, 6))
+    fig, ax1 = plt.subplots(figsize=(6.6, 6))
 
     x = [i/10 for i in range(10)] 
 
     x2 = [-0.1]+x+[1.0]
     if ada == 'energy':
         name = "TEA"
+    elif  ada == 'source':
+        name = "Source"
     else:
         name = ada.upper()
-    ax1.bar(x, [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0], color='#E9B4B4', alpha=0.9, width=0.1, edgecolor='#D95F5B', linewidth=0.15, align='edge', hatch='//', label='Gap')
-    # bin_acc = [0,0.1,0.34,0.48,0.463,0.536,0.631,0.768,0.808,0.97]
-    ax1.bar(x, bin_acc, color='#2874a2', width=0.1, edgecolor='black', linewidth=0.15, align='edge', label=name)
+
+    '''
+    name = 'TEA'
+    bin_acc = [0,0.1,0.34,0.48,0.463,0.536,0.631,0.768,0.808,0.97]
+    bin_acc = [0,0.1,0.34,0.48,0.463,0.536,0.631,0.768,0.808,0.97]
+    eces=0.0402
+    mces=0.4737
+    '''
+
+    # ax1.bar(x, [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0], color='#E9B4B4', alpha=0.9, width=0.1, edgecolor='#D95F5B', linewidth=0.15, align='edge', hatch='//', label='Gap')
+    ax1.bar(x, [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0], color='grey', alpha=0.6, width=0.1, edgecolor='white', linewidth=0.5, align='edge', label='Gap')
+    ax1.bar(x, bin_acc, color='#2874a2', width=0.1, edgecolor='black', linewidth=0.5, align='edge', label=name)
     
-    ax1.plot(x2, [-0.05, 0.05,0.15,0.25,0.35,0.45,0.55,0.65,0.75,0.85,0.95, 1.05], color='grey', linestyle='dashed', linewidth=2)
+    ax1.plot(x2, [-0.05, 0.05,0.15,0.25,0.35,0.45,0.55,0.65,0.75,0.85,0.95, 1.05], color='k', linestyle='dashed', linewidth=2.5)
     ax1.set_xlim([0, 1])
     ax1.set_ylim([0, 1])
     
     ax2 = ax1.twinx()
-    x3=[i+0.035 for i in x]
-    ax2.bar(x3, bin_num, width=0.03, color='#8c1515', align='edge',label="#Sample")
+    x3=[i+0.03 for i in x]
+    ax2.bar(x3, bin_num, width=0.04, color='#8c1515', align='edge',label="#Sample")
     ax2.yaxis.set_major_formatter(ticker.FuncFormatter(thousands_formatter))
     ax2.set_ylim([0,12000])
     
@@ -116,14 +135,12 @@ def plot_calibration_hist(model, x, y, batch_size = 100, logger=None, device = N
     handles = handles1 + handles2
     labels = labels1 + labels2
 
-    plt.legend(handles, labels, loc="upper left", ncol=3, fontsize = 12)
+    plt.legend(handles, labels, loc="upper left", ncol=3, prop=myfont2)
+    plt.text(0.02, 10100, r"ECE($\downarrow$)={:.2f}%".format(eces*100),fontsize = 24,fontproperties=myfont)
+    plt.text(0.02, 9100, r"MCE($\downarrow$)={:.2f}%".format(mces*100),fontsize = 24, fontproperties=myfont)
+    plt.title(name,fontsize = 24,fontproperties=myfont)
     plt.tight_layout()
-    # eces=0.0402
-    # mces=0.4737
-    plt.text(0.02, 10500, r"ECE($\downarrow$)={:.2f}%".format(eces*100),fontsize = 17,fontproperties=myfont)
-    plt.text(0.02, 9800, r"MCE($\downarrow$)={:.2f}%".format(mces*100),fontsize = 17, fontproperties=myfont)
-    # plt.text(0.02, 9300, r"ACC($\uparrow$)={:.2f}%".format(accs*100),fontsize = 14, fontproperties=myfont)
-    plt.savefig("./save/others/calibration/original/{}-{}.pdf".format(c,s), format='pdf')
+    plt.savefig("./save/others/calibration/original2/{}-{}-{}.pdf".format(name,c,s), format='pdf')
     plt.close()
 
 
