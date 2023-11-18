@@ -1,11 +1,11 @@
 
-### WRN-28-10
+# TEA: Test-time Energy Adaptation
 
-the default model for [RobustBench](https://github.com/RobustBench/robustbench).
+the default model using WRN-28-10 for [RobustBench](https://github.com/RobustBench/robustbench).
 
 **Usage**:
 
 ```python
-CUDA_VISIBLE_DEVICES=1 python main.py --cfg cfgs/bn/cifar10/source.yaml
-CUDA_VISIBLE_DEVICES=1 python main.py --cfg cfgs/bn/cifar10/energy.yaml
+CUDA_VISIBLE_DEVICES=1 python main.py --cfg cfgs/cifar10/source.yaml
+CUDA_VISIBLE_DEVICES=1 python main.py --cfg cfgs/cifar10/energy.yaml
 ```

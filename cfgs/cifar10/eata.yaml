@@ -1,0 +1,42 @@
+SAVE_DIR: ./save/cifar10/bn-wrn-28-10
+MODEL:
+  ADAPTATION: eata
+  ARCH: WRN2810_BN
+  ADA_PARAM:
+    - bn
+EATA:
+  USE_FISHER: True
+CORRUPTION:
+  DATASET: cifar10
+  NUM_CLASSES: 10
+  IMG_SIZE: 32
+  NUM_CHANNEL: 3
+  SEVERITY:
+    - 5
+    - 4
+    - 3
+    - 2
+    - 1
+  TYPE:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+    - zoom_blur
+    - snow
+    - frost
+    - fog
+    - brightness
+    - contrast
+    - elastic_transform
+    - pixelate
+    - jpeg_compression
+OPTIM:
+  BATCH_SIZE: 200
+  METHOD: Adam
+  STEPS: 1
+  BETA: 0.9
+  LR: 0.001
+  WD: 0.

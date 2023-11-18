@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.jit
 import torch.nn.functional as F
 
-from core.setup.param import load_model_and_optimizer, copy_model_and_optimizer
+from core.param import load_model_and_optimizer, copy_model_and_optimizer
 
 
 class SHOT(nn.Module):

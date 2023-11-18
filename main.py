@@ -8,47 +8,42 @@ from robustbench.utils import load_model
 
 from core.eval import evaluate_ori, evaluate_ood
 from core.calibration import calibration_ori
-from core.conf import cfg, load_cfg_fom_args
-from core.utils import set_seed, set_logger, build_model_res50gn, build_model_res18bn, build_model_res50in
-from core.setup.adapt import *
+from core.config import cfg, load_cfg_fom_args
+from core.utils import set_seed, set_logger
+from core.model import build_model_wrn2810bn, build_model_res18bn, build_model_res50gn
+from core.setada import *
 
 logger = logging.getLogger(__name__)
 
-def main(trial=None):
+def main():
     load_cfg_fom_args()
     set_seed(cfg)
     set_logger(cfg)
-
-    # cfg.OPTIM.STEPS = trial.suggest_int("step", 1, 5, step=1)
-    # cfg.OPTIM.LR = trial.suggest_loguniform('lr', 1e-6, 1e-3)
-    # logger.info('Optuna number of trial: '+str(trial.number))
-    # logger.info('Optuna number of trial: '+str(trial.params))
-    # cfg.EBM.STEPS = trial.suggest_int("sgld_step", 20, 100, step=40)
-    # cfg.EBM.SGLD_LR = trial.suggest_float("sgld_lr", 0.01, 0.1, step=0.05) 
-
     device = torch.device('cuda:0')
 
     # configure base model
-    if 'GN' in cfg.MODEL.ARCH:
-        group_num=int(cfg.MODEL.ARCH.split("_")[-1])
-        base_model = build_model_res50gn(group_num, cfg.CORRUPTION.NUM_CLASSES).to(device)
-        ckpt = torch.load(os.path.join(cfg.CKPT_DIR ,'{}/ResNet50G{}.pth'.format(cfg.CORRUPTION.DATASET,group_num)))
-        base_model.load_state_dict(ckpt['state_dict'])
-    elif 'IN' in cfg.MODEL.ARCH:
-        base_model = build_model_res50in(cfg.CORRUPTION.NUM_CLASSES).to(device)
-        ckpt = torch.load(os.path.join(cfg.CKPT_DIR ,'{}/ResNet50I.pth'.format(cfg.CORRUPTION.DATASET)))
-        base_model.load_state_dict(ckpt['state_dict'])
-    else:
-        if (cfg.CORRUPTION.DATASET == 'cifar10') or (cfg.CORRUPTION.DATASET == 'cifar100' and cfg.MODEL.ARCH != 'Standard'):
-            base_model = load_model(cfg.MODEL.ARCH, cfg.CKPT_DIR, cfg.CORRUPTION.DATASET, ThreatModel.corruptions).to(device)
-        elif (cfg.CORRUPTION.DATASET == 'mnist')or (cfg.CORRUPTION.DATASET == 'tin200') or (cfg.CORRUPTION.DATASET == 'cifar100' and cfg.MODEL.ARCH == 'Standard'):
-            base_model = torch.load(os.path.join(cfg.CKPT_DIR, cfg.CORRUPTION.DATASET, str(cfg.MODEL.ARCH)+'.pt')).to(device)
-        elif cfg.CORRUPTION.DATASET == 'pacs':
+    if 'BN' in cfg.MODEL.ARCH:
+        if cfg.CORRUPTION.DATASET == 'cifar10' and cfg.MODEL.ARCH == 'WRN2810_BN':
+            # use robustbench
+            model = 'Standard'
+            base_model = load_model(model, cfg.CKPT_DIR, cfg.CORRUPTION.DATASET, ThreatModel.corruptions).to(device)
+        elif cfg.CORRUPTION.DATASET == 'cifar100' or cfg.CORRUPTION.DATASET == 'tin200':
+            base_model = build_model_wrn2810bn(cfg.CORRUPTION.NUM_CLASSES).to(device)
+            ckpt = torch.load(os.path.join(cfg.CKPT_DIR ,'{}/{}.pth'.format(cfg.CORRUPTION.DATASET, cfg.MODEL.ARCH)))
+            base_model.load_state_dict(ckpt['state_dict'])
+        elif cfg.CORRUPTION.DATASET == 'pacs' or cfg.CORRUPTION.DATASET == 'mnist' :
             base_model = build_model_res18bn(cfg.CORRUPTION.NUM_CLASSES).to(device)
-            ckpt = torch.load(os.path.join(cfg.CKPT_DIR ,'{}/{}.pth'.format(cfg.CORRUPTION.DATASET,cfg.MODEL.ARCH)))
+            ckpt = torch.load(os.path.join(cfg.CKPT_DIR ,'{}/{}.pth'.format(cfg.CORRUPTION.DATASET, cfg.MODEL.ARCH)))
             base_model.load_state_dict(ckpt['state_dict'])
         else:
             raise NotImplementedError
+    elif 'GN' in cfg.MODEL.ARCH:
+        group_num=int(cfg.MODEL.ARCH.split("_")[-1])
+        base_model = build_model_res50gn(group_num, cfg.CORRUPTION.NUM_CLASSES).to(device)
+        ckpt = torch.load(os.path.join(cfg.CKPT_DIR ,'{}/{}.pth'.format(cfg.CORRUPTION.DATASET, cfg.MODEL.ARCH)))
+        base_model.load_state_dict(ckpt['state_dict'])
+    else:
+        raise NotImplementedError
 
     # configure tta model
     if cfg.MODEL.ADAPTATION == "source":
@@ -82,30 +77,10 @@ def main(trial=None):
         raise NotImplementedError
     
     # evaluate on each severity and type of corruption in turn
-    # evaluate_adv(base_model, model, cfg, logger, device)
-    # evaluate_ood(model, cfg, logger, device)
-    # calibration_ori(model, cfg, logger, device)
+    evaluate_ood(model, cfg, logger, device)
     evaluate_ori(model, cfg, logger, device)
-
-
-
-    # if use_optuna:
-    #     trial.report(ret, epoch)
-    #     if trial.should_prune():
-    #         raise optuna.exceptions.TrialPruned()
-    
+    # evaluate_adv(base_model, model, cfg, logger, device)
+    # calibration_ori(model, cfg, logger, device)
 
 if __name__ == '__main__':
     main()
-
-# use_optuna = False
-# optuna_save_dir = '/home/yuanyige/Ladiff_nll/save_optuna_200'
-# if use_optuna:
-#     os.makedirs(optuna_save_dir, exist_ok=True)
-#     logger = get_logger(logpath=os.path.join(optuna_save_dir, 'verbose.log'))
-#     study = optuna.create_study(direction='maximize')
-#     study.optimize(main, n_trials=20)
-#     print('\n\nbest value',study.best_value) 
-#     print('best param',study.best_params) 
-# else:
-    # main()

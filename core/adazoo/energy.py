@@ -6,11 +6,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from torchvision.utils import save_image
-from core.setup.param import load_model_and_optimizer, copy_model_and_optimizer
+from core.param import load_model_and_optimizer, copy_model_and_optimizer
 
 def init_random(bs, im_sz=32, n_ch=3):
-    # im_sz = 32
-    # n_ch = 3
     return torch.FloatTensor(bs, n_ch, im_sz, im_sz).uniform_(-1, 1)
 
 
@@ -44,19 +42,6 @@ def sample_p_0(reinit_freq, replay_buffer, bs, im_sz, n_ch, device, y=None):
     samples = choose_random * random_samples + (1 - choose_random) * buffer_samples
     return samples.to(device), inds
 
-# def sample_p0_from_px(reinit_freq, replay_buffer, bs, im_sz, n_ch, device, x, y=None):
-#     if len(replay_buffer) == 0:
-#         return init_random(bs, im_sz=im_sz, n_ch=n_ch), []
-#     buffer_size = len(replay_buffer)
-#     inds = torch.randint(0, buffer_size, (bs,))
-#     # if cond, convert inds to class conditional inds
-
-#     buffer_samples = replay_buffer[inds]
-#     random_samples = init_random(bs, im_sz=im_sz, n_ch=n_ch)
-#     choose_random = (torch.rand(bs) < reinit_freq).float()[:, None, None, None]
-#     samples = choose_random * random_samples + (1 - choose_random) * buffer_samples
-
-#     return samples.to(device), inds
 
 def sample_q(f, replay_buffer, n_steps, sgld_lr, sgld_std, reinit_freq, batch_size, im_sz, n_ch, device, y=None):
     """this func takes in replay_buffer now so we have the option to sample from
@@ -67,7 +52,6 @@ def sample_q(f, replay_buffer, n_steps, sgld_lr, sgld_std, reinit_freq, batch_si
     bs = batch_size if y is None else y.size(0)
     # generate initial samples and buffer inds of those samples (if buffer is used)
     init_sample, buffer_inds = sample_p_0(reinit_freq=reinit_freq, replay_buffer=replay_buffer, bs=bs, im_sz=im_sz, n_ch=n_ch, device=device ,y=y)
-    #init_sample = x
     init_samples = deepcopy(init_sample)
     x_k = torch.autograd.Variable(init_sample, requires_grad=True)
     # sgld
@@ -117,64 +101,41 @@ class Energy(nn.Module):
         self.model_state, self.optimizer_state = \
             copy_model_and_optimizer(self.energy_model, self.optimizer)
 
-    def forward(self, x, target, if_adapt=True, counter=None, if_vis=False):
+    def forward(self, x, if_adapt=True, counter=None, if_vis=False):
         if self.episodic:
             self.reset()
         
         if if_adapt:
             for i in range(self.steps):
-                outputs, energy_loss, energes = forward_and_adapt(x, self.energy_model, self.optimizer, 
+                outputs = forward_and_adapt(x, self.energy_model, self.optimizer, 
                                             self.replay_buffer, self.sgld_steps, self.sgld_lr, self.sgld_std, self.reinit_freq,
                                             if_cond=self.if_cond, n_classes=self.n_classes)
-            
-                if i % 1 ==0 and if_vis:
+                if i % 1 == 0 and if_vis:
                     visualize_images(path=self.path, replay_buffer_old=self.replay_buffer_old, replay_buffer=self.replay_buffer, energy_model=self.energy_model, 
                                     sgld_steps=self.sgld_steps, sgld_lr=self.sgld_lr, sgld_std=self.sgld_std, reinit_freq=self.reinit_freq,
                                     batch_size=100, n_classes=self.n_classes, im_sz=self.im_sz, n_ch=self.n_ch, device=x.device, counter=counter, step=i)
-                self.logger.info("Step {}, Energy Loss: {}".format(i, energy_loss))
-
-                # closs = F.cross_entropy(outputs, target)
-                # acc = ((outputs.max(1)[1] == target).float().sum())/x.shape[0]
-                # self.logger.info("Step {}, Real Energy value: {}".format(i, energes))
-                # self.logger.info("Step {}, Classication Loss: {}".format(i, closs))
-                # self.logger.info("Step {}, Acc: {}".format(i,acc))
-                # self.logger.info("output: {}".format(F.softmax(outputs)[0].detach().cpu().numpy()))
-                # self.logger.info("sort: {}".format(torch.sort(F.softmax(outputs)[0])[0].detach().cpu().numpy()))
         else:
             self.energy_model.eval()
             with torch.no_grad():
                 outputs = self.energy_model.classify(x)
-                energes = self.energy_model(x).mean()
 
-        return outputs, energes
+        return outputs
 
     def reset(self):
         if self.model_state is None or self.optimizer_state is None:
             raise Exception("cannot reset without saved model/optimizer state")
         load_model_and_optimizer(self.energy_model, self.optimizer,
                                  self.model_state, self.optimizer_state)
-
-    # def configure_model_optimizer(self, algorithm, alpha, lr, wd):
-    #     adapted_algorithm = copy.deepcopy(algorithm)
-    #     optimizer = torch.optim.Adam(
-    #         adapted_algorithm.parameters(), 
-    #         # adapted_algorithm.classifier.parameters(), 
-    #         lr = lr  * alpha,
-    #         weight_decay = wd
-    #     )
-    #     return adapted_algorithm, optimizer
         
 @torch.enable_grad()
 def visualize_images(path, replay_buffer_old, replay_buffer, energy_model, 
                      sgld_steps, sgld_lr, sgld_std, reinit_freq,
                      batch_size, n_classes, im_sz, n_ch, device=None, counter=None, step=None):
     num_cols=10
-    #y = torch.randint(0, n_classes, (batch_size,)).to(device)
     repeat_times = batch_size // n_classes
     y = torch.arange(n_classes).repeat(repeat_times).to(device) 
     x_fake, _ = sample_q(energy_model, replay_buffer, n_steps=sgld_steps, sgld_lr=sgld_lr, sgld_std=sgld_std, reinit_freq=reinit_freq, batch_size=batch_size, im_sz=im_sz, n_ch=n_ch, device=device, y=y)
     images = x_fake.detach().cpu()
-    #save_image(((images + 1)/2).clamp(0.0, 1.0), './cc.png', padding=0, nrow=num_cols)
     save_image(images , os.path.join(path, 'sample.png'), padding=2, nrow=num_cols)
 
     num_cols=40
@@ -185,7 +146,6 @@ def visualize_images(path, replay_buffer_old, replay_buffer, energy_model,
         save_image(images_init , os.path.join(path, 'buffer_init.png'), padding=2, nrow=num_cols)
     save_image(images , os.path.join(path, 'buffer-'+str(counter)+"-"+str(step)+'.png'), padding=2, nrow=num_cols) # 
     save_image(images_diff , os.path.join(path, 'buffer_diff.png'), padding=2, nrow=num_cols)
-
 
 @torch.enable_grad()  # ensure grads in possible no grad context for testing
 def forward_and_adapt(x, energy_model, optimizer, replay_buffer, sgld_steps, sgld_lr, sgld_std, reinit_freq, if_cond=False, n_classes=10):
@@ -212,28 +172,11 @@ def forward_and_adapt(x, energy_model, optimizer, replay_buffer, sgld_steps, sgl
     energy_real = out_real[0].mean()
     energy_fake = energy_model(x_fake)[0].mean()
 
-    # outputs = out_real[1]
-    # py, y_prime = F.softmax(outputs, dim=-1).max(1)
-    # flag = py > 0.9
-    # clf_loss = F.cross_entropy(outputs[flag], y_prime[flag])
-    # print("pl")
-    
-    # # (2) diversity
-    # softmax_out = F.softmax(outputs, dim=-1)
-    # msoftmax = softmax_out.mean(dim=0)
-    # ent_loss = torch.sum(msoftmax * torch.log(msoftmax + 1e-5))
-
     # adapt
-    #lamb=0.05
-    loss = (- (energy_real - energy_fake)) #+ (1-lamb) * ent_loss + 0.3 * clf_loss
+    loss = (- (energy_real - energy_fake)) 
     loss.backward()
     optimizer.step()
     optimizer.zero_grad()
-
-    # energy_real_post = energy_model(x).mean()
-    # energes = [energy_real.data.item(), energy_real_post.data.item()]
-    energes=[0,0]
-
     outputs = energy_model.classify(x)
 
-    return outputs, loss.data.item(), energes
+    return outputs

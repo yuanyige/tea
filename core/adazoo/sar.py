@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.jit
 import math
 import numpy as np
-from core.setup.param import load_model_and_optimizer, copy_model_and_optimizer
+from core.param import load_model_and_optimizer, copy_model_and_optimizer
 
 def update_ema(ema, new_data):
     if ema is None:
