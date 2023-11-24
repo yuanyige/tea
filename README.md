@@ -9,6 +9,7 @@
 CUDA_VISIBLE_DEVICES=0 python main.py --cfg cfgs/cifar10/energy.yaml
 ```
 The default model using trained WRN-28-10 from [RobustBench](https://github.com/RobustBench/robustbench).
+
 *./core/config.py* defines all default settings, you can specify particular settings in *cfgs/xx.yaml*
 
 ### Baseline Support
