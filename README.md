@@ -1,7 +1,7 @@
 
 # TEA: Test-time Energy Adaptation
 
-![Our Proposed TEA](./pic/tea.png)
+![Our Proposed TEA](./pic/tea.jpg)
 
 ### Main Usage
 
