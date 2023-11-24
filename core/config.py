@@ -120,7 +120,7 @@ _C.RNG_SEED = 1
 _C.SAVE_DIR = "./output"
 
 # Data directory
-_C.DATA_DIR = "/home/yuanyige/datasets"
+_C.DATA_DIR = "/home/user/datasets"
 
 # Weight directory
 _C.CKPT_DIR = "./ckpt"
