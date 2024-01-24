@@ -77,6 +77,28 @@ def evaluate_ood(model, cfg, logger, device):
         frame.loc['average'] = {i+1: np.mean(res, axis=1)[i] for i in range(0, len(cfg.CORRUPTION.SEVERITY))}
         frame['avg'] = frame[list(range(1, len(cfg.CORRUPTION.SEVERITY)+1))].mean(axis=1)
         logger.info("\n"+str(frame))
+
+    elif cfg.CORRUPTION.DATASET == 'imagenet':
+        res = np.zeros((len(cfg.CORRUPTION.SEVERITY),len(cfg.CORRUPTION.TYPE)))
+        for c in range(len(cfg.CORRUPTION.TYPE)):
+            for s in range(len(cfg.CORRUPTION.SEVERITY)):
+                try:
+                    model.reset()
+                    logger.info("resetting model")
+                except:
+                    logger.warning("not resetting model")
+                x_test, y_test = load_data(cfg.CORRUPTION.DATASET, cfg.CORRUPTION.NUM_EX,
+                                            cfg.CORRUPTION.SEVERITY[s], cfg.DATA_DIR, False,
+                                            [cfg.CORRUPTION.TYPE[c]])
+                x_test, y_test = x_test.to(device), y_test.to(device)
+                acc = clean_accuracy(model, x_test, y_test, cfg.OPTIM.BATCH_SIZE, logger=logger, ada=cfg.MODEL.ADAPTATION, if_adapt=True)           
+                logger.info(f"acc % [{cfg.CORRUPTION.TYPE[c]}{cfg.CORRUPTION.SEVERITY[s]}]: {acc:.2%}")
+                res[s, c] = acc
+
+        frame = pd.DataFrame({i+1: res[i, :] for i in range(0, len(cfg.CORRUPTION.SEVERITY))}, index=cfg.CORRUPTION.TYPE)
+        frame.loc['average'] = {i+1: np.mean(res, axis=1)[i] for i in range(0, len(cfg.CORRUPTION.SEVERITY))}
+        frame['avg'] = frame[list(range(1, len(cfg.CORRUPTION.SEVERITY)+1))].mean(axis=1)
+        logger.info("\n"+str(frame))
     
     elif cfg.CORRUPTION.DATASET == 'mnist':
         _, _, _, test_loader = load_dataloader(root=cfg.DATA_DIR, dataset=cfg.CORRUPTION.DATASET, batch_size=cfg.OPTIM.BATCH_SIZE, if_shuffle=False, logger=logger)

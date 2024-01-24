@@ -2,8 +2,9 @@ import os
 import logging
 
 import torch
-from robustbench.model_zoo.enums import ThreatModel
-from robustbench.utils import load_model
+import torchvision
+# from robustbench.model_zoo.enums import ThreatModel
+# from robustbench.utils import load_model
 
 
 from core.eval import evaluate_ori, evaluate_ood
@@ -42,6 +43,8 @@ def main():
         base_model = build_model_res50gn(group_num, cfg.CORRUPTION.NUM_CLASSES).to(device)
         ckpt = torch.load(os.path.join(cfg.CKPT_DIR ,'{}/{}.pth'.format(cfg.CORRUPTION.DATASET, cfg.MODEL.ARCH)))
         base_model.load_state_dict(ckpt['state_dict'])
+    elif 'ViT' in cfg.MODEL.ARCH:
+        base_model = torchvision.models.vit_b_16(weights=torchvision.models.vision_transformer.ViT_B_16_Weights).to(device)
     else:
         raise NotImplementedError
 
