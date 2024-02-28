@@ -35,3 +35,14 @@ CUDA_VISIBLE_DEVICES=0 python main.py --cfg cfgs/cifar10/sar.yaml
 CUDA_VISIBLE_DEVICES=0 python main.py --cfg cfgs/cifar10/pl.yaml
 CUDA_VISIBLE_DEVICES=0 python main.py --cfg cfgs/cifar10/shot.yaml
 ```
+
+### Reference
+If you find our work useful, please consider citing our paper:
+```
+@article{yuan2023tea,
+  title={TEA: Test-time Energy Adaptation},
+  author={Yuan, Yige and Xu, Bingbing and Hou, Liang and Sun, Fei and Shen, Huawei and Cheng, Xueqi},
+  journal={arXiv preprint arXiv:2311.14402},
+  year={2023}
+}
+```
