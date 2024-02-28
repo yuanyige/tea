@@ -1,7 +1,11 @@
 
 # TEA: Test-time Energy Adaptation
 
-Code for the paper [TEA: Test-time Energy Adaptation](https://arxiv.org/abs/2311.14402) (CVPR 2024)
+> Yige Yuan, Bingbing Xu, Liang Hou, Fei Sun, Huawei Shen, Xueqi Cheng
+> 
+> The IEEE / CVF Computer Vision and Pattern Recognition Conference (CVPR), 2024
+
+This is an official PyTorch implementation of paper [TEA: Test-time Energy Adaptation](https://arxiv.org/abs/2311.14402).
 
 ![Our Proposed TEA](./pic/tea.jpg)
 
