@@ -1,6 +1,8 @@
 
 # TEA: Test-time Energy Adaptation
 
+Code for the paper [TEA: Test-time Energy Adaptation](https://arxiv.org/abs/2311.14402) (CVPR 2024)
+
 ![Our Proposed TEA](./pic/tea.jpg)
 
 ### Main Usage
