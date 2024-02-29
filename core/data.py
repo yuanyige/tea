@@ -4,8 +4,8 @@ import random
 import torchvision.transforms as T
 from torchvision import datasets, transforms
 from torch.utils import data
-from robustbench.data import load_cifar10c, load_cifar100c, load_imagenetc, load_imagenet3dcc
-from robustbench.data import load_cifar10, load_cifar100
+# from robustbench.data import load_cifar10c, load_cifar100c, load_imagenetc, load_imagenet3dcc
+# from robustbench.data import load_cifar10, load_cifar100
 
 def set_transform(dataset):
     if dataset.lower() == 'cifar10' or dataset.lower() == 'cifar100':
@@ -39,6 +39,14 @@ def set_transform(dataset):
             T.ToTensor(),
         ])
         transform_test = T.Compose([T.Resize(32), T.ToTensor()])
+    elif 'imagenet' in dataset.lower():
+        transform_train = transforms.Compose([
+            T.Resize(224),
+            T.RandomCrop(224, padding=4),
+            T.RandomHorizontalFlip(),
+            T.ToTensor(),
+        ])
+        transform_test = T.Compose([T.Resize(224), T.ToTensor()])
     else:
         raise
     return transform_train, transform_test
@@ -49,6 +57,31 @@ def load_tin200(n_examples, severity=None, data_dir=None, shuffle=False, corrupt
             dataset = datasets.ImageFolder(os.path.join(data_dir, 'Tiny-ImageNet-C', corruption, str(severity)), transform=transform)
     else:
         dataset = datasets.ImageFolder(os.path.join(data_dir, 'tiny-imagenet-200', 'val'), transform=transform)
+    
+    batch_size = 100
+    test_loader = data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4)
+
+    x_test, y_test = [], []
+    for i, (x, y) in enumerate(test_loader):
+        x_test.append(x)
+        y_test.append(y)
+        if n_examples is not None and batch_size * i >= n_examples:
+            break
+    x_test_tensor = torch.cat(x_test)
+    y_test_tensor = torch.cat(y_test)
+
+    if n_examples is not None:
+        x_test_tensor = x_test_tensor[:n_examples]
+        y_test_tensor = y_test_tensor[:n_examples]
+
+    return x_test_tensor, y_test_tensor
+
+def load_imagenet(n_examples, severity=None, data_dir=None, shuffle=False, corruptions=None, transform=None):
+    if corruptions is not None:
+        for corruption in corruptions:
+            dataset = datasets.ImageFolder(os.path.join(data_dir, 'imagenet', corruption, str(severity)), transform=transform)
+    else:
+        dataset = datasets.ImageFolder(os.path.join(data_dir, 'imagenet', 'val'), transform=transform)
     
     batch_size = 100
     test_loader = data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4)
@@ -103,6 +136,9 @@ def load_data(data, n_examples=None, severity=None, data_dir=None, shuffle=False
         elif data == 'pacs':
             _, transform = set_transform(data)
             x_test, y_test = load_pacs(data_dir=data_dir, shuffle=shuffle, corruptions=corruptions, transform=transform)
+        elif data == 'imagenet':
+            _, transform = set_transform(data)
+            x_test, y_test = load_imagenet(n_examples=n_examples, severity=severity, data_dir=data_dir, shuffle=shuffle, corruptions=corruptions, transform=transform)
         
         print(x_test.shape, n_examples)
         return x_test, y_test

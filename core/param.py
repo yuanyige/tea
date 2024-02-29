@@ -31,6 +31,15 @@ def collect_params(model, ada_param=['bn'], logger=None):
                     if np in ['weight', 'bias']:  # weight is scale, bias is shift
                         params.append(p)
                         names.append(f"{nm}.{np}")
+
+    if 'ln' in ada_param:
+        logger.info('adapting weights of layer-normalization layer')
+        for nm, m in model.named_modules():
+            if isinstance(m, nn.LayerNorm): 
+                for np, p in m.named_parameters():
+                    if np in ['weight', 'bias']:  # weight is scale, bias is shift
+                        params.append(p)
+                        names.append(f"{nm}.{np}")
     
     if 'in' in ada_param:
         logger.info('adapting weights of instance-normalization layer')
@@ -87,6 +96,16 @@ def configure_model(model, ada_param=None):
         # configure norm for model updates: enable grad + force batch statisics
         for m in model.modules():
             if isinstance(m, nn.GroupNorm):
+                m.requires_grad_(True)
+                # force use of batch stats in train and eval modes
+                m.track_running_stats = False
+                m.running_mean = None
+                m.running_var = None
+
+    if 'ln' in ada_param:
+        # configure norm for model updates: enable grad + force batch statisics
+        for m in model.modules():
+            if isinstance(m, nn.LayerNorm):
                 m.requires_grad_(True)
                 # force use of batch stats in train and eval modes
                 m.track_running_stats = False
